@@ -2,8 +2,8 @@ import socket
 import random
 from threading import Thread
 from datetime import datetime
-from colorama import Fore, init, Back
-from encryption import encrypt, decrypt
+from colorama import Fore, init
+from encryption import encrypt, decrypt, generate_key
 
 init()
 
@@ -24,14 +24,28 @@ print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
 s.connect((SERVER_HOST, SERVER_PORT))
 print("[+] Connected.")
 
-name = input("Enter your name: ")
-s.send(encrypt(f"{cli_color}{name} connected.\n{Fore.RESET}".encode()))
+name = input("Enter your username: ")
+password = input("Enter your password: ")
+key = generate_key(password, b"chupa")
+s.send(name.encode("utf-8"))
+
+challenge = s.recv(1024)
+try:
+    response = decrypt(challenge, key).decode("utf-8")
+    if response == "OK":
+        s.send("OK".encode("utf-8"))
+        s.send(encrypt(f"{cli_color}{name} connected.{Fore.RESET}".encode()))
+        print(f"Welcome, {name}!")
+except:
+        print("Invalid username or password.")
+        s.close()
+        exit(1)
     
 def listen_for_messages():
     while True:
         try:
             msg = s.recv(1024)
-            msg = decrypt(msg).decode()
+            msg = decrypt(msg).decode("utf-8")
             msg = msg.replace(separator_token, ": ")
             print("\n" + msg)
         except (OSError, ConnectionResetError):
@@ -40,8 +54,7 @@ def listen_for_messages():
         except Exception:
             break
 
-t = Thread(target=listen_for_messages)
-t.daemon = True
+t = Thread(target=listen_for_messages, daemon=True)
 t.start()
 
 while True:
@@ -50,6 +63,7 @@ while True:
         break
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     to_send = f"{cli_color}[{now}] {name}{separator_token}{to_send}{Fore.RESET}"
-    s.send(encrypt(to_send.encode()))
-s.send(encrypt(f"{cli_color}{name} disconnected.{Fore.RESET}".encode()))
+    print(to_send := to_send.replace(separator_token, ": "))
+    s.send(encrypt(to_send.encode("utf-8")))
+s.send(encrypt(f"{cli_color}{name} disconnected.{Fore.RESET}".encode("utf-8")))
 s.close()

@@ -1,8 +1,12 @@
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Protocol.KDF import PBKDF2
 
 key = b"chipichapa228dibidibidabadaba123"
+
+def generate_key(passw, salt, lenght=32):
+    return PBKDF2(passw, salt, dkLen=lenght)
 
 def encrypt(msg, key=key):
     iv = get_random_bytes(16)
