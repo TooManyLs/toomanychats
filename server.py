@@ -20,6 +20,12 @@ def listen_for_client(cs, username):
     while True:
         try:
             msg = cs.recv(1024)
+            try:
+                if msg.decode("utf-8"):
+                    handle_command(msg, cs)
+                    continue
+            except:
+                pass
             if not msg:
                 break
             for client in client_sockets:
@@ -32,6 +38,12 @@ def listen_for_client(cs, username):
             authenticated_users.remove(username)
             cs.close()
             break
+
+def handle_command(cmd, cs):
+    hr = "-" * 50
+    if cmd.decode("utf-8") == "!userlist":
+        users = f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users)}\n{hr}"
+        cs.send(encrypt(users.encode("utf-8")))
 
 s = socket.socket()
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

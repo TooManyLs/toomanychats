@@ -2,13 +2,14 @@ import socket
 import random
 from threading import Thread
 from datetime import datetime
+from time import sleep, perf_counter
 from colorama import Fore, init, Back
 from encryption import encrypt, decrypt, generate_key
 
 init()
 
 colors = [Fore.BLUE, Fore.CYAN, Fore.GREEN, Fore.LIGHTBLACK_EX,
-          Fore.LIGHTBLUE_EX, Fore.LIGHTCYAN_EX, Fore.LIGHTGREEN_EX,
+          Fore.LIGHTBLUE_EX, Fore.LIGHTCYAN_EX,
           Fore.LIGHTMAGENTA_EX, Fore.LIGHTRED_EX, Fore.LIGHTWHITE_EX,
           Fore.LIGHTYELLOW_EX, Fore.MAGENTA, Fore.RED, Fore.YELLOW,
           ]
@@ -50,7 +51,10 @@ def listen_for_messages():
             msg = s.recv(1024)
             msg = decrypt(msg).decode("utf-8")
             msg = msg.replace(separator_token, ": ")
-            print("\n" + msg)
+            if msg[:8] == "[Server]":
+                print(f"\n{Fore.LIGHTGREEN_EX}{msg}{Fore.RESET}")
+            else:
+                print("\n" + msg)
         except (OSError, ConnectionResetError):
             s.close()
             break
@@ -60,11 +64,22 @@ def listen_for_messages():
 t = Thread(target=listen_for_messages, daemon=True)
 t.start()
 
+cmd_t_o = [0]
+
 while True:
     to_send = input()
     if to_send.lower() == "q":
         break
     if not to_send:
+        continue
+    if to_send == "!userlist":
+        t_o = perf_counter()
+        if abs(t_o - cmd_t_o[0]) < 3:
+            print(f"\n{Back.RED}{Fore.BLACK}[!] Command timeout 3s.{Fore.RESET}{Back.RESET}")
+        else:
+            s.send(to_send.encode("utf-8"))
+            sleep(0.05)
+        cmd_t_o[0] = t_o
         continue
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     to_send = f"{cli_color}[{now}] {name}{separator_token}{to_send}{Fore.RESET}"
