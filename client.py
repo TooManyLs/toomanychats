@@ -5,6 +5,7 @@ from datetime import datetime
 from time import sleep, perf_counter
 from colorama import Fore, init, Back
 from encryption import encrypt, decrypt, generate_key
+from base64 import b64decode
 
 init()
 
@@ -30,12 +31,14 @@ while not len(name):
         name = ""
         print("Type valid name.")
 password = input("Enter your password: ")
-key = generate_key(password, b"chupa")
 s.send(name.encode("utf-8"))
 
-challenge = s.recv(1024)
+server_resp = decrypt(s.recv(1024)).decode("utf-8")
+salt, challenge = server_resp.split("|")
+key = generate_key(password, salt.encode())
+
 try:
-    response = decrypt(challenge, key).decode("utf-8")
+    response = decrypt(b64decode(challenge.encode("utf-8")), key).decode("utf-8")
     if response == "OK":
         s.send("OK".encode("utf-8"))
         s.send(encrypt(f"{cli_color}{name} connected.{Fore.RESET}".encode()))
@@ -48,8 +51,7 @@ except:
 def listen_for_messages():
     while True:
         try:
-            msg = s.recv(1024)
-            msg = decrypt(msg).decode("utf-8")
+            msg = decrypt(s.recv(1024)).decode("utf-8")
             msg = msg.replace(separator_token, ": ")
             if msg[:8] == "[Server]":
                 print(f"\n{Fore.LIGHTGREEN_EX}{msg}{Fore.RESET}")

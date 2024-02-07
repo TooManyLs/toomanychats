@@ -1,17 +1,20 @@
 import socket
 from threading import Thread
 from encryption import encrypt, generate_key
+from base64 import b64encode
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
 
-users = {
+usrs = {
     "f": "1234",
     "jiggy": "1111",
     "AssDestroyer": "dadaya",
     "chugga": "4321",
     "bbgirl": "cutie123",
 }
+
+users = {k: {"pass": generate_key(v, b"chupa"), "salt": b"chupa"} for k, v in usrs.items()}
 
 client_sockets = set()
 authenticated_users = []
@@ -26,8 +29,6 @@ def listen_for_client(cs, username):
                     continue
             except:
                 pass
-            if not msg:
-                break
             for client in client_sockets:
                 if client != cs:
                     client.send(msg)
@@ -42,8 +43,8 @@ def listen_for_client(cs, username):
 def handle_command(cmd, cs):
     hr = "-" * 50
     if cmd.decode("utf-8") == "!userlist":
-        users = f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users)}\n{hr}"
-        cs.send(encrypt(users.encode("utf-8")))
+        userlist = f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users)}\n{hr}"
+        cs.send(encrypt(userlist.encode("utf-8")))
 
 s = socket.socket()
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -58,9 +59,13 @@ while True:
     username = cli_socket.recv(1024).decode("utf-8")
 
     if username in users and username not in authenticated_users:
-        password = users[username].encode("utf-8")
-        challenge = encrypt("OK".encode("utf-8"), generate_key(password, b"chupa"))
-        cli_socket.send(challenge)
+        password = users[username]["pass"]
+        salt = users[username]["salt"]
+        challenge = encrypt("OK".encode("utf-8"), password)
+        
+        challenge_string = f"{salt.decode("utf-8")}|{b64encode(challenge).decode("utf-8")}"
+        
+        cli_socket.send(encrypt(challenge_string.encode("utf-8")))
 
         response = cli_socket.recv(1024).decode("utf-8")
 
