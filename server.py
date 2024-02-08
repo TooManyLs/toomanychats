@@ -61,14 +61,11 @@ while True:
     if username in users and username not in authenticated_users:
         password = users[username]["pass"]
         salt = users[username]["salt"]
-        challenge = encrypt("OK".encode("utf-8"), password)
-        
+        challenge = encrypt("OK".encode("utf-8"), password)       
         challenge_string = f"{salt.decode("utf-8")}|{b64encode(challenge).decode("utf-8")}"
-        
         cli_socket.send(encrypt(challenge_string.encode("utf-8")))
 
         response = cli_socket.recv(1024).decode("utf-8")
-
         if response == "OK":
             client_sockets.add(cli_socket)
             authenticated_users.append(username)
