@@ -17,8 +17,9 @@ colors = [Fore.BLUE, Fore.CYAN, Fore.GREEN, Fore.LIGHTBLACK_EX,
           ]
 cli_color = random.choice(colors)
 
-SERVER_HOST = "127.0.0.1"
-SERVER_PORT = 5002
+address = input("Enter the address of the server: ").split(":")
+SERVER_HOST = address[0]
+SERVER_PORT = int(address[1])
 separator_token = "<SEP>"
 
 def signin():
@@ -33,7 +34,7 @@ def signin():
     try:
         server_resp = decrypt(s.recv(1024)).decode("utf-8")
         salt, challenge = server_resp.split("|")
-        key = generate_key(password, b64decode(salt.encode()))
+        key = generate_key(password, b64decode(salt.encode("utf-8")))
         response = decrypt(b64decode(challenge.encode("utf-8")), key).decode("utf-8")
         if response == "OK":
             s.send("OK".encode("utf-8"))
@@ -110,6 +111,7 @@ while True:
         break
     if not to_send:
         continue
+### Chat commands
     if to_send == "!userlist":
         t_o = perf_counter()
         if abs(t_o - cmd_t_o[0]) < 3:
@@ -118,6 +120,15 @@ while True:
             s.send(to_send.encode("utf-8"))
         cmd_t_o[0] = t_o
         continue
+    if to_send == "!code":
+        t_o = perf_counter()
+        if abs(t_o - cmd_t_o[0]) < 3:
+            print(f"\n{Back.RED}{Fore.BLACK}[!] Command timeout 3s.{Fore.RESET}{Back.RESET}")
+        else:
+            s.send(to_send.encode("utf-8"))
+        cmd_t_o[0] = t_o
+        continue
+    
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     to_send = f"{cli_color}[{now}] {name}{separator_token}{to_send}{Fore.RESET}"
     print(t := to_send.replace(separator_token, ": ", 1))

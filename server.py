@@ -1,6 +1,6 @@
 import socket
 from threading import Thread
-from encryption import encrypt, decrypt, generate_key
+from encryption import encrypt, decrypt, generate_sha256
 from base64 import b64encode, b64decode
 
 SERVER_HOST = "0.0.0.0"
@@ -9,9 +9,9 @@ SERVER_PORT = 5002
 users = {}
 
 f_codes = {
-    "803DDF02770514AC78D1825B27B5CE3394447C0D3F587AA2342C9A11B3C6FB56":\
+    "admin":\
           "A408DB8643628EAC4C6474814F347EEA06EB51BE8108D3C461EE5DADE74A17ED"} 
-#server-admin_name:server-admin-friend_code
+#server-admin-friend_code
 
 client_sockets = set()
 authenticated_users = []
@@ -22,7 +22,7 @@ def listen_for_client(cs, username):
             msg = cs.recv(1024)
             try:
                 if msg.decode("utf-8"):
-                    handle_command(msg, cs)
+                    handle_command(msg, cs, username)
                     continue
             except:
                 pass
@@ -34,14 +34,12 @@ def listen_for_client(cs, username):
             if cs in client_sockets:
                 client_sockets.remove(cs)
             authenticated_users.remove(username)
+            del f_codes[username]
             cs.close()
             break
 
-def handle_command(cmd, cs):
-    hr = "-" * 50
-    if cmd.decode("utf-8") == "!userlist":
-        userlist = f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users)}\n{hr}"
-        cs.send(encrypt(userlist.encode("utf-8")))
+def handle_command(cmd, cs, user=None):
+    hr = "-" * 80
     if cmd.decode("utf-8") == "!signup":
         try:
             friend_code, friend = cs.recv(1024).decode("utf-8").split("|")
@@ -55,10 +53,18 @@ def handle_command(cmd, cs):
         name, passw, salt = reg_info.split("|")
         if name not in users:
             cs.send(f"[+] You've successfully created an account!".encode("utf-8"))
+            f_codes[friend] = generate_sha256()
             users[name] = {"passw": b64decode(passw.encode("utf-8")), "salt": b64decode(salt)}
         else:
             cs.send(f"[-] {name} is not available.".encode("utf-8"))
             pass
+### Chat commands
+    elif cmd.decode("utf-8") == "!userlist":
+        userlist = f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users)}\n{hr}"
+        cs.send(encrypt(userlist.encode("utf-8")))
+    elif cmd.decode("utf-8") == "!code":
+        code = f"[Server]\nYour friend code:\n{hr}\n{f_codes[user]}\n{hr}"
+        cs.send(encrypt(code.encode("utf-8")))
 
 s = socket.socket()
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -89,6 +95,7 @@ while True:
         if response == "OK":
             client_sockets.add(cli_socket)
             authenticated_users.append(username)
+            f_codes[username] = generate_sha256()
             print(f"[+] {username} authenticated successfully.")
             t = Thread(target=listen_for_client, args=(cli_socket, username), daemon=True)
             t.start()
