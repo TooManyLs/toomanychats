@@ -1,11 +1,12 @@
 import socket
 import random
+import os
 from threading import Thread
 from datetime import datetime
 from time import perf_counter
 from colorama import Fore, init, Back
 from encryption import encrypt, decrypt, generate_key
-from base64 import b64decode
+from base64 import b64decode, b64encode
 
 init()
 
@@ -32,8 +33,7 @@ def signin():
     try:
         server_resp = decrypt(s.recv(1024)).decode("utf-8")
         salt, challenge = server_resp.split("|")
-        key = generate_key(password, salt.encode())
-
+        key = generate_key(password, b64decode(salt.encode()))
         response = decrypt(b64decode(challenge.encode("utf-8")), key).decode("utf-8")
         if response == "OK":
             s.send("OK".encode("utf-8"))
@@ -46,21 +46,31 @@ def signin():
         exit(1)
 
 def signup():
-    """Should type friend code first to sign up"""
+    s.send("!signup".encode("utf-8"))
+    friend_code = input("Enter friend code and his nickname splitted with '|' to countinue registration: ")
+    s.send(friend_code.encode("utf-8"))
+    resp = s.recv(1024).decode("utf-8")
+    if resp == "reject":
+        print("No such code.")
+        s.close()
+        exit(1)
     name = ""
     while len(name) < 3 or not name.isalnum():
         name = input("Enter username: ")
-        if len(name) < 3 or not name.isalnum():
+        if len(name) < 3 or not name.isalnum() or len(name) > 20:
             name = ""
-            print("Type valid name.")
+            print("Type valid name. (3-20 alphanumeric chars)")
     password = ""
     while len(password) < 6:
-        password = input("Create a password: ")
+        password = input("Create a password (minimum 6 symbols): ")
         if len(password) < 6:
             password = ""
             print("Password is too short.")
-    print(f"{Fore.LIGHTGREEN_EX}You've succesfully created an account!{Fore.RESET}")
-    signin()
+    salt = os.urandom(16)
+    hash = generate_key(password, salt)
+    s.send(encrypt(f"{name}|{b64encode(hash).decode("utf-8")}|{b64encode(salt).decode("utf-8")}".encode("utf-8")))
+    print(s.recv(1024).decode("utf-8"))
+    return signin()
 
 def listen_for_messages():
     while True:
