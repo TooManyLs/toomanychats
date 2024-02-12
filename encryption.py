@@ -10,7 +10,7 @@ import json
 key = b"chipichapa228dibidibidabadaba123"
 
 def generate_key(passw, salt, lenght=32):
-    return PBKDF2(passw, salt, dkLen=lenght)
+    return PBKDF2(passw, salt, dkLen=lenght, count=1000000)
 
 def generate_sha256():
     rand = get_random_bytes(32)
@@ -41,15 +41,15 @@ def send_encrypted(msg, pubkey):
     text, key = msg
     pubkey_bytes = pubkey.export_key()
     return json.dumps((
-        b64encode(text).decode("utf-8"), 
-        b64encode(cipher.encrypt(key)).decode("utf-8"), 
-        pubkey_bytes.decode("utf-8")
+        b64encode(text).decode('utf-8'), 
+        b64encode(cipher.encrypt(key)).decode('utf-8'), 
+        pubkey_bytes.decode('utf-8')
         ))
 
 def recv_encrypted(msg):
     text, aes, pub = json.loads(msg)
     return (
-        b64decode(text.encode("utf-8")), 
-        b64decode(aes.encode("utf-8")), 
-        RSA.import_key(pub.encode("utf-8"))
+        b64decode(text.encode('utf-8')), 
+        b64decode(aes.encode('utf-8')), 
+        RSA.import_key(pub.encode('utf-8'))
     )

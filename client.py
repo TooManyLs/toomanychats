@@ -20,7 +20,7 @@ init()
 
 colors = [Fore.BLUE, Fore.CYAN, Fore.GREEN, Fore.LIGHTBLACK_EX,
           Fore.LIGHTBLUE_EX, Fore.LIGHTCYAN_EX,
-          Fore.LIGHTMAGENTA_EX, Fore.LIGHTRED_EX, Fore.LIGHTWHITE_EX,
+          Fore.LIGHTMAGENTA_EX, Fore.LIGHTRED_EX,
           Fore.LIGHTYELLOW_EX, Fore.MAGENTA, Fore.RED, Fore.YELLOW,
           ]
 cli_color = random.choice(colors)
@@ -38,23 +38,23 @@ def signin():
             name = ""
             print("Type valid name.")
     password = input("Enter your password: ")
-    s.send(name.encode("utf-8"))
+    s.send(name.encode('utf-8'))
     try:
         with open(f"keys/{name}_private.pem", "rb") as f:
             my_pvtkey = RSA.import_key(f.read())
         my_cipher = PKCS1_OAEP.new(my_pvtkey)
-        data = s.recv(2048).decode("utf-8")
+        data = s.recv(2048).decode('utf-8')
         data, aes, pub = recv_encrypted(data)
         aes = my_cipher.decrypt(aes)
-        server_resp = decrypt_aes(data, aes).decode("utf-8")
+        server_resp = decrypt_aes(data, aes).decode('utf-8')
         salt, challenge = server_resp.split("|")
-        key = generate_key(password, b64decode(salt.encode("utf-8")))
-        response = decrypt_aes(b64decode(challenge.encode("utf-8")), key).decode("utf-8")
+        key = generate_key(password, b64decode(salt.encode('utf-8')))
+        response = decrypt_aes(b64decode(challenge.encode('utf-8')), key).decode('utf-8')
         if response == "OK":
-            s.send("OK".encode("utf-8"))
+            s.send("OK".encode('utf-8'))
             connected = encrypt_aes(f"{cli_color}{name} connected.{Fore.RESET}"\
-                                    .encode("utf-8"))
-            s.send(send_encrypted(connected, server_pubkey).encode("utf-8"))
+                                    .encode('utf-8'))
+            s.send(send_encrypted(connected, server_pubkey).encode('utf-8'))
             print(f"Welcome, {name}!")
             return name, my_cipher
     except Exception:
@@ -63,10 +63,10 @@ def signin():
         exit(1)
 
 def signup():
-    s.send("!signup".encode("utf-8"))
+    s.send("!signup".encode('utf-8'))
     friend_code = input("Enter friend code and his nickname splitted with '|' to countinue registration: ")
-    s.send(friend_code.encode("utf-8"))
-    resp = s.recv(1024).decode("utf-8")
+    s.send(friend_code.encode('utf-8'))
+    resp = s.recv(1024).decode('utf-8')
     if resp == "reject":
         print("No such code.")
         s.close()
@@ -78,9 +78,9 @@ def signup():
             name = ""
             print("Type valid name. (3-20 alphanumeric chars)")
     password = ""
-    while len(password) < 6:
-        password = input("Create a password (minimum 6 symbols): ")
-        if len(password) < 6:
+    while len(password) < 8:
+        password = input("Create a password (minimum 8 symbols): ")
+        if len(password) < 8:
             password = ""
             print("Password is too short.")
     salt = os.urandom(16)
@@ -88,22 +88,24 @@ def signup():
     rsa_keys = RSA.generate(2048)
     pubkey = rsa_keys.public_key().export_key()
     pvtkey = rsa_keys.export_key()
-    with open(f"keys/{name}_private.pem", "wb") as f:
-        f.write(pvtkey)
-    data = encrypt_aes(f"{name}|{b64encode(hash).decode("utf-8")}|\
-            {b64encode(salt).decode("utf-8")}|\
-            {pubkey.decode("utf-8")}".encode("utf-8"))
-    s.send(send_encrypted(data, server_pubkey).encode("utf-8"))
-    print(s.recv(1024).decode("utf-8"))
+    data = encrypt_aes(f"{name}|{b64encode(hash).decode('utf-8')}|\
+{b64encode(salt).decode('utf-8')}|\
+{pubkey.decode('utf-8')}".encode('utf-8'))
+    s.send(send_encrypted(data, server_pubkey).encode('utf-8'))
+    ok = s.recv(1024).decode('utf-8')
+    if "[+]" in ok:
+        with open(f"keys/{name}_private.pem", "wb") as f:
+            f.write(pvtkey)
+    print(ok)
     return signin()
 
 def listen_for_messages():
     while True:
         try:
-            data = s.recv(4096).decode("utf-8")
+            data = s.recv(10000).decode('utf-8')
             data, aes, pub = recv_encrypted(data)
             aes = my_cipher.decrypt(aes)
-            msg = decrypt_aes(data, aes).decode("utf-8")
+            msg = decrypt_aes(data, aes).decode('utf-8')
             msg = msg.replace(separator_token, ": ", 1)
             if msg[:8] == "[Server]":
                 print(f"\n{Fore.LIGHTGREEN_EX}{msg}{Fore.RESET}")
@@ -143,7 +145,7 @@ while True:
         if abs(t_o - cmd_t_o[0]) < 3:
             print(timeout_warn)
         else:
-            s.send(to_send.encode("utf-8"))
+            s.send(to_send.encode('utf-8'))
         cmd_t_o[0] = t_o
         continue
     if to_send == "!code":
@@ -151,14 +153,14 @@ while True:
         if abs(t_o - cmd_t_o[0]) < 3:
             print(timeout_warn)
         else:
-            s.send(to_send.encode("utf-8"))
+            s.send(to_send.encode('utf-8'))
         cmd_t_o[0] = t_o
         continue
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     to_send = f"{cli_color}[{now}] {name}{separator_token}{to_send}{Fore.RESET}"
     print(t := to_send.replace(separator_token, ": ", 1))
-    to_send = encrypt_aes(to_send.encode("utf-8"))
-    s.send(send_encrypted(to_send, server_pubkey).encode("utf-8"))
-dc = encrypt_aes(f"{cli_color}{name} disconnected.{Fore.RESET}".encode("utf-8"))
-s.send(send_encrypted(dc, server_pubkey).encode("utf-8"))
+    to_send = encrypt_aes(to_send.encode('utf-8'))
+    s.send(send_encrypted(to_send, server_pubkey).encode('utf-8'))
+dc = encrypt_aes(f"{cli_color}{name} disconnected.{Fore.RESET}".encode('utf-8'))
+s.send(send_encrypted(dc, server_pubkey).encode('utf-8'))
 s.close()
