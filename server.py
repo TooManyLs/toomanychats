@@ -11,12 +11,13 @@ from base64 import b64encode, b64decode
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 import asyncio
+import database as db
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
 SERVER_RSA = RSA.generate(2048)
 s_cipher = PKCS1_OAEP.new(SERVER_RSA)
-users = {}
+db_pass = input("input database password: ")
 
 f_codes = {
     "admin":\
@@ -26,6 +27,7 @@ client_sockets = set()
 authenticated_users = {}
 
 async def listen_for_client(reader, writer, username):
+    conn = db.connect(db_pass)
     while True:
         try:
             data = await reader.read(10000)
@@ -41,15 +43,16 @@ async def listen_for_client(reader, writer, username):
                                 if sock == client:
                                     name = user
                                     break
-                            pubkey = users[name]["public"]
+                            user = db.get_user(conn, name)
+                            pubkey = user["public_key"].encode('utf-8')
                             client.write(send_encrypted(
                                 (msg, dec_key), pubkey
                                 ).encode('utf-8'))
                 else:
                     cli = ""
-                    for user, sub_dict in users.items():
-                        if sub_dict['public'] == pub.export_key():
-                            cli = authenticated_users[user]
+                    for user in db.get_all_users(conn):
+                        if user["public_key"].encode('utf-8') == pub.export_key():
+                            cli = authenticated_users[user["name"]]
                             cli.write(send_encrypted((msg, aes), pub).encode('utf-8'))
                             break
             except Exception as e:
@@ -63,8 +66,10 @@ async def listen_for_client(reader, writer, username):
             del f_codes[username]
             writer.close()
             break
+    conn.close()
 
-async def handle_command(cmd, reader, writer, user=None):
+async def handle_command(cmd, reader, writer, username=None):
+    conn = db.connect(db_pass)
     hr = "-" * 80
     if cmd == "!signup":
         try:
@@ -81,33 +86,36 @@ async def handle_command(cmd, reader, writer, user=None):
         aes = s_cipher.decrypt(aes)
         reg_info = decrypt_aes(reg_info, aes).decode('utf-8')
         name, passw, salt, pubkey = reg_info.split("|")
-        if name not in users:
+        if db.get_user(conn, name) is None:
             writer.write(f"[+] You've successfully created an account!".encode('utf-8'))
             f_codes[friend] = generate_sha256()
-            pubkey = pubkey.strip()
-            users[name] = {
-                "passw": b64decode(passw.encode('utf-8')), 
-                "salt": b64decode(salt),
-                "public": pubkey.encode('utf-8')
-            }
+            db.add_user(
+                conn,
+                name,
+                b64decode(passw.encode('utf-8')),
+                b64decode(salt),
+                pubkey.encode('utf-8')
+            )
         else:
             writer.write(f"[-] {name} is not available.".encode('utf-8'))
             pass
     elif cmd == "!userlist":
-        user_pub = users[user]["public"]
+        user = db.get_user(conn, username)
+        user_pub = user["public_key"].encode('utf-8')
         userlist =\
          f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
         writer.write(send_encrypted(encrypt_aes(userlist.encode('utf-8')), user_pub)\
                 .encode('utf-8'))
     elif cmd == "!code":
-        code = f"[Server]\nYour friend code:\n{hr}\n{f_codes[user]}\n{hr}"
-        user_pub = users[user]["public"]
+        code = f"[Server]\nYour friend code:\n{hr}\n{f_codes[username]}\n{hr}"
+        user = db.get_user(conn, username)
+        user_pub = user["public_key"].encode('utf-8')
         writer.write(send_encrypted(encrypt_aes(code.encode('utf-8')), user_pub)\
                 .encode('utf-8'))
-
-import asyncio
+    conn.close()
 
 async def handle_client(reader, writer):
+    conn = db.connect(db_pass)
     cli_addr = writer.get_extra_info('peername')
     print(f"[+] {cli_addr} connected.")
     writer.write(SERVER_RSA.public_key().export_key())
@@ -118,13 +126,14 @@ async def handle_client(reader, writer):
         await handle_command("!signup", reader, writer)
     else:
         username = first_resp
-    data = await reader.read(1024)
-    username = data.decode('utf-8') if not username else username
-
-    if username in users and username not in authenticated_users:
-        password = users[username]["passw"]
-        salt = users[username]["salt"]
-        user_pub = users[username]["public"]
+    if not username:
+        data = await reader.read(2048)
+        username = data.decode('utf-8')
+    user = db.get_user(conn, username)
+    if user and username not in authenticated_users:
+        password = user["password"]
+        salt = user["salt"]
+        user_pub = user["public_key"].encode('utf-8')
         challenge, _ = encrypt_aes("OK".encode('utf-8'), password)       
         challenge_string =\
         f"{b64encode(salt).decode('utf-8')}|{b64encode(challenge).decode('utf-8')}"
@@ -144,9 +153,10 @@ async def handle_client(reader, writer):
             print(f"[-] {username} failed to authenticate.")
             writer.close()
     else:
-        print(f"[-] No such user as {username}." if username not in users\
+        print(f"[-] No such user as {username}." if user == None\
                else f"[-] {cli_addr} tries to connect as {username}")
         writer.close()
+    conn.close()
 
 async def main():
     server = await asyncio.start_server(
