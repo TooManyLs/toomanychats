@@ -11,15 +11,25 @@ def connect(password):
         )
     return conn
 
-def get_user(conn, name):
+def get_user(conn, name , values="*"):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
-        "SELECT * FROM public.users WHERE name = %s", 
+        f"SELECT {values} FROM public.users WHERE name = %s", 
         (name,)
         )
     user = cur.fetchone()
     cur.close()
     return user
+
+def get_by_pubkey(conn, public_key):
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT name FROM public.users WHERE public_key = %s",
+        (public_key.decode('utf-8'))
+    )
+    user = cur.fetchone()
+    cur.close()
+    return user[0] if user else None
 
 def get_all_users(conn):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

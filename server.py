@@ -1,5 +1,4 @@
 import socket
-from threading import Thread
 from encryption import (
     encrypt_aes, 
     decrypt_aes, 
@@ -43,18 +42,16 @@ async def listen_for_client(reader, writer, username):
                                 if sock == client:
                                     name = user
                                     break
-                            user = db.get_user(conn, name)
+                            user = db.get_user(conn, name, "public_key")
                             pubkey = user["public_key"].encode('utf-8')
                             client.write(send_encrypted(
                                 (msg, dec_key), pubkey
                                 ).encode('utf-8'))
                 else:
-                    cli = ""
-                    for user in db.get_all_users(conn):
-                        if user["public_key"].encode('utf-8') == pub.export_key():
-                            cli = authenticated_users[user["name"]]
-                            cli.write(send_encrypted((msg, aes), pub).encode('utf-8'))
-                            break
+                    user = db.get_by_pubkey(conn, pub.export_key().decode('utf-8'))
+                    cli = authenticated_users[user]
+                    cli.write(send_encrypted(msg, aes), pub).encode('utf-8')
+                    continue
             except Exception as e:
                 await handle_command(msg, reader, writer, username)
                 continue
@@ -86,7 +83,7 @@ async def handle_command(cmd, reader, writer, username=None):
         aes = s_cipher.decrypt(aes)
         reg_info = decrypt_aes(reg_info, aes).decode('utf-8')
         name, passw, salt, pubkey = reg_info.split("|")
-        if db.get_user(conn, name) is None:
+        if db.get_user(conn, name, "name") is None:
             writer.write(f"[+] You've successfully created an account!".encode('utf-8'))
             f_codes[friend] = generate_sha256()
             db.add_user(
@@ -100,7 +97,7 @@ async def handle_command(cmd, reader, writer, username=None):
             writer.write(f"[-] {name} is not available.".encode('utf-8'))
             pass
     elif cmd == "!userlist":
-        user = db.get_user(conn, username)
+        user = db.get_user(conn, username, "public_key")
         user_pub = user["public_key"].encode('utf-8')
         userlist =\
          f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
@@ -108,7 +105,7 @@ async def handle_command(cmd, reader, writer, username=None):
                 .encode('utf-8'))
     elif cmd == "!code":
         code = f"[Server]\nYour friend code:\n{hr}\n{f_codes[username]}\n{hr}"
-        user = db.get_user(conn, username)
+        user = db.get_user(conn, username, "public_key")
         user_pub = user["public_key"].encode('utf-8')
         writer.write(send_encrypted(encrypt_aes(code.encode('utf-8')), user_pub)\
                 .encode('utf-8'))
