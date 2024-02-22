@@ -63,7 +63,7 @@ def signin():
         exit(1)
 
 def signup():
-    s.send("!signup".encode('utf-8'))
+    s.send("/signup".encode('utf-8'))
     friend_code = input("Enter friend code and his nickname splitted with '|' to countinue registration: ")
     s.send(friend_code.encode('utf-8'))
     resp = s.recv(1024).decode('utf-8')
@@ -119,10 +119,10 @@ print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
 s.connect((SERVER_HOST, SERVER_PORT))
 server_pubkey = RSA.import_key(s.recv(1024))
 print("[+] Connected.")
-enter = input("!s to sign in | !r to sign up: ")
-if enter == "!s":
+enter = input("/s to sign in | /r to sign up: ")
+if enter == "/s":
     name, my_cipher = signin()
-elif enter == "!r":
+elif enter == "/r":
     name, my_cipher = signup()
 else:
     s.close()
@@ -140,7 +140,7 @@ while True:
     if not to_send:
         continue
 ### Chat commands
-    if to_send == "!userlist":
+    if to_send == "/userlist":
         t_o = perf_counter()
         if abs(t_o - cmd_t_o[0]) < 3:
             print(timeout_warn)
@@ -148,7 +148,7 @@ while True:
             s.send(to_send.encode('utf-8'))
         cmd_t_o[0] = t_o
         continue
-    if to_send == "!code":
+    if to_send == "/code":
         t_o = perf_counter()
         if abs(t_o - cmd_t_o[0]) < 3:
             print(timeout_warn)

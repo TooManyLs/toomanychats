@@ -31,6 +31,8 @@ async def listen_for_client(reader, writer, username):
         try:
             data = await reader.read(10000)
             msg = data.decode('utf-8')
+            if not msg:
+                raise ConnectionResetError
             try:
                 msg, aes, pub = recv_encrypted(msg)
                 if pub == SERVER_RSA.public_key():
@@ -68,7 +70,7 @@ async def listen_for_client(reader, writer, username):
 async def handle_command(cmd, reader, writer, username=None):
     conn = db.connect(db_pass)
     hr = "-" * 80
-    if cmd == "!signup":
+    if cmd == "/signup":
         try:
             data = await reader.read(1024)
             friend_code, friend = data.decode('utf-8').split("|")
@@ -96,14 +98,14 @@ async def handle_command(cmd, reader, writer, username=None):
         else:
             writer.write(f"[-] {name} is not available.".encode('utf-8'))
             pass
-    elif cmd == "!userlist":
+    elif cmd == "/userlist":
         user = db.get_user(conn, username, "public_key")
         user_pub = user["public_key"].encode('utf-8')
         userlist =\
          f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
         writer.write(send_encrypted(encrypt_aes(userlist.encode('utf-8')), user_pub)\
                 .encode('utf-8'))
-    elif cmd == "!code":
+    elif cmd == "/code":
         code = f"[Server]\nYour friend code:\n{hr}\n{f_codes[username]}\n{hr}"
         user = db.get_user(conn, username, "public_key")
         user_pub = user["public_key"].encode('utf-8')
@@ -119,8 +121,8 @@ async def handle_client(reader, writer):
     data = await reader.read(1024)
     first_resp = data.decode('utf-8')
     username = ""
-    if first_resp == "!signup":
-        await handle_command("!signup", reader, writer)
+    if first_resp == "/signup":
+        await handle_command("/signup", reader, writer)
     else:
         username = first_resp
     if not username:
