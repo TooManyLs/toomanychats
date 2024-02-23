@@ -1,3 +1,5 @@
 /env
 /__pycache__
 /keys
+gui/widgets/__pycache__
+gui/widgets/utils/__pycache__
