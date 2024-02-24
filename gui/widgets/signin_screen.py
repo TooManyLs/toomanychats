@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QLineEdit,
     )
-from PySide6.QtGui import QRegularExpressionValidator as Q_reV, QPainter
+from PySide6.QtGui import QRegularExpressionValidator as Q_reV
 from PySide6.QtCore import QRegularExpression as Q_re
 from widgets.utils.encryption import (
     encrypt_aes, 
@@ -30,7 +30,7 @@ class SignIn(QWidget):
         layout = QGridLayout()
 
         self.name_f = TextField("Username:", "#2e2e2e")
-        self.pass_f = TextField("Password:", "#2e2e2e")
+        self.pass_f = TextField("Password:", "#2e2e2e", True)
         self.btn = QPushButton("Sign in")
         self.reg = QPushButton("Don't have an account yet? Sign up.")
         self.inv_n = QLabel()
@@ -48,7 +48,6 @@ class SignIn(QWidget):
         valid_pass = Q_reV(Q_re("^.{8,50}$"))
         self.name_f.setValidator(valid_name)
         self.pass_f.setValidator(valid_pass)
-        self.pass_f.setEchoMode(QLineEdit.Password)
 
         form = QVBoxLayout()
 
@@ -84,6 +83,7 @@ class SignIn(QWidget):
             #signin:hover{
                 background-color: #3e3e3e;
             }
+            #signin:pressed{background-color: #5e5e5e;}
             #reg{
                 border: none;
                 color: #888888;
