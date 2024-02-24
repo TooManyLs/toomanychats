@@ -4,9 +4,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QLineEdit
     )
 from datetime import datetime
+
+from widgets.custom.textfield import TextArea
 
 class ChatWidget(QWidget):
     def __init__(self, stacked_layout, s, server_pubkey):
@@ -17,7 +18,16 @@ class ChatWidget(QWidget):
 
         self.label = QLabel()
         self.button = QPushButton("Send")
-        self.send_field = QLineEdit()
+        self.send_field = TextArea()
+        self.send_field.setPlaceholderText("Write a message...")
+        self.send_field.setObjectName("tarea")
+        self.setStyleSheet(
+            """
+            #tarea{
+                border: none;
+            }
+            """
+            )
 
         input_layout = QHBoxLayout()
         input_layout.addWidget(self.send_field)
