@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QLineEdit,
     )
-from PySide6.QtGui import QRegularExpressionValidator as Q_reV
+from PySide6.QtGui import QRegularExpressionValidator as Q_reV, QPainter
 from PySide6.QtCore import QRegularExpression as Q_re
 from widgets.utils.encryption import (
     encrypt_aes, 
@@ -15,6 +15,7 @@ from widgets.utils.encryption import (
     send_encrypted,
     recv_encrypted
     )
+from widgets.custom.textfield import TextField
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from base64 import b64decode
@@ -28,37 +29,38 @@ class SignIn(QWidget):
 
         layout = QGridLayout()
 
-        self.name_l = QLabel("Name:")
-        self.name_f = QLineEdit()
-        self.pass_l = QLabel("Password:")
-        self.pass_f = QLineEdit()
+        self.name_f = TextField("Username:", "#2e2e2e")
+        self.pass_f = TextField("Password:", "#2e2e2e")
         self.btn = QPushButton("Sign in")
+        self.reg = QPushButton("Don't have an account yet? Sign up.")
         self.inv_n = QLabel()
-        self.inv_n.setStyleSheet("color: red")
         self.inv_p = QLabel()
-        self.inv_p.setStyleSheet("color: red")
         self.incorrect = QLabel()
-        self.incorrect.setStyleSheet("color: red")
+        self.name_f.setObjectName("text-field")
+        self.pass_f.setObjectName("text-field")
+        self.inv_n.setObjectName("invalid")
+        self.inv_p.setObjectName("invalid")
+        self.incorrect.setObjectName("invalid")
+        self.btn.setObjectName("signin")
+        self.reg.setObjectName("reg")
 
         valid_name = Q_reV(Q_re("[a-zA-Z0-9_]{3,20}"))
         valid_pass = Q_reV(Q_re("^.{8,50}$"))
         self.name_f.setValidator(valid_name)
         self.pass_f.setValidator(valid_pass)
+        self.pass_f.setEchoMode(QLineEdit.Password)
 
         form = QVBoxLayout()
 
-        form.addWidget(self.name_l)
         form.addWidget(self.name_f)
         form.addWidget(self.inv_n)
 
-        form.addWidget(self.pass_l)
         form.addWidget(self.pass_f)
         form.addWidget(self.inv_p)
 
-        form.addSpacing(10)
         form.addWidget(self.btn)
-        form.addSpacing(10)
         form.addWidget(self.incorrect)
+        form.addWidget(self.reg)
 
         layout.addItem(form, 1, 1)
 
@@ -70,7 +72,41 @@ class SignIn(QWidget):
 
         self.setLayout(layout)
 
+        self.setStyleSheet(
+            """
+            #signin{
+                background-color: #2e2e2e;
+                height: 45px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            #signin:hover{
+                background-color: #3e3e3e;
+            }
+            #reg{
+                border: none;
+                color: #888888;
+            }
+            #reg:hover{color: #f1f1f1;}
+            #invalid{
+                margin-top: 5px;
+                margin-bottom: 5px;
+                color: red;
+                font-size: 10px;
+            }
+            #text-field{
+            height: 30px;
+            padding-top: 15px;
+            padding-left: 5px;
+            font-size: 16px;
+            border-radius: 6px;
+            }
+            """
+            )
+
         self.btn.clicked.connect(self.sign_in)
+        self.reg.clicked.connect(self.sign_up)
 
     def sign_in(self):
         self.inv_n.setText("")
@@ -105,3 +141,7 @@ class SignIn(QWidget):
             self.inv_p.setText("Invalid password (8-50 characters)")
         if not self.name_f.hasAcceptableInput():
             self.inv_n.setText("Invalid password (3-20 characters)")
+    
+    def sign_up(self):
+        print("go to sign up screen")
+        # self.stacked_layout.setCurrentIndex()
