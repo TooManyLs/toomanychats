@@ -3,3 +3,4 @@
 /keys
 gui/widgets/__pycache__
 gui/widgets/utils/__pycache__
+gui/widgets/custom/__pycache__
