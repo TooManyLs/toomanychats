@@ -14,6 +14,7 @@ class EnterWidget(QWidget):
 
         self.sign_in_button = QPushButton("Sign In")
         self.sign_up_button = QPushButton("Sign Up")
+        self.sign_up_button.setObjectName("reg")
         buttons = QVBoxLayout()
         buttons.addWidget(self.sign_in_button)
         buttons.addSpacing(20)
@@ -21,13 +22,39 @@ class EnterWidget(QWidget):
         
         layout.addItem(buttons, 1, 1)
 
-        layout.setColumnStretch(0, 2)
+        layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
-        layout.setColumnStretch(2, 2)
+        layout.setColumnStretch(2, 1)
         layout.setRowStretch(0, 1)
         layout.setRowStretch(2, 1)
 
         self.setLayout(layout)
+
+        self.setStyleSheet(
+            """
+            QPushButton{
+                background-color: #2e2e2e;
+                height: 45px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            QPushButton:hover{
+                background-color: #3e3e3e;
+            }
+            QPushButton:pressed{background-color: #5e5e5e;}
+            #reg{
+                background-color: #1e1e1e;
+                border: 2px solid #2e2e2e;
+            }
+            #reg:hover{
+                background-color: #3e3e3e;
+                border: none;
+                color: #1e1e1e;
+            }
+            #reg:pressed{background-color: #5e5e5e;}
+            """
+            )
 
         self.sign_in_button.clicked.connect(self.on_sign_in_clicked)
         self.sign_up_button.clicked.connect(self.on_sign_up_clicked)
