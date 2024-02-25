@@ -43,6 +43,8 @@ class SignIn(QWidget):
         self.incorrect.setObjectName("invalid")
         self.btn.setObjectName("signin")
         self.reg.setObjectName("reg")
+        self.btn.setFlat(True)
+        self.reg.setFlat(True)
 
         valid_name = Q_reV(Q_re("[a-zA-Z0-9_]{3,20}"))
         valid_pass = Q_reV(Q_re("^.{8,50}$"))
@@ -135,6 +137,7 @@ class SignIn(QWidget):
                     self.stacked_layout.setCurrentIndex(2)
                     return name, my_cipher
             except Exception:
+                self.s.send("Fail".encode('utf-8'))
                 self.incorrect.setText("Failed to authenticate:\nInvalid username or password.")
             print(name, password)
         if not self.pass_f.hasAcceptableInput():

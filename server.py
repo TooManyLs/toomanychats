@@ -118,43 +118,46 @@ async def handle_client(reader, writer):
     cli_addr = writer.get_extra_info('peername')
     print(f"[+] {cli_addr} connected.")
     writer.write(SERVER_RSA.public_key().export_key())
-    data = await reader.read(1024)
-    first_resp = data.decode('utf-8')
-    username = ""
-    if first_resp == "/signup":
-        await handle_command("/signup", reader, writer)
-    else:
-        username = first_resp
-    if not username:
-        data = await reader.read(2048)
-        username = data.decode('utf-8')
-    user = db.get_user(conn, username)
-    if user and username not in authenticated_users:
-        password = user["password"]
-        salt = user["salt"]
-        user_pub = user["public_key"].encode('utf-8')
-        challenge, _ = encrypt_aes("OK".encode('utf-8'), password)       
-        challenge_string =\
-        f"{b64encode(salt).decode('utf-8')}|{b64encode(challenge).decode('utf-8')}"
-        writer.write(send_encrypted(
-            encrypt_aes(challenge_string.encode('utf-8')), user_pub
-            ).encode('utf-8'))
-
+    while True:
         data = await reader.read(1024)
-        response = data.decode('utf-8')
-        if response == "OK":
-            client_sockets.add(writer)
-            authenticated_users[username] = writer
-            f_codes[username] = generate_sha256()
-            print(f"[+] {username} authenticated successfully.")
-            asyncio.create_task(listen_for_client(reader, writer, username))
-        else:
-            print(f"[-] {username} failed to authenticate.")
+        first_resp = data.decode('utf-8')
+        if not first_resp:
             writer.close()
-    else:
-        print(f"[-] No such user as {username}." if user == None\
-               else f"[-] {cli_addr} tries to connect as {username}")
-        writer.close()
+            break
+        username = ""
+        if first_resp == "/signup":
+            await handle_command("/signup", reader, writer)
+        else:
+            username = first_resp
+        if not username:
+            data = await reader.read(2048)
+            username = data.decode('utf-8')
+        user = db.get_user(conn, username)
+        if user and username not in authenticated_users:
+            password = user["password"]
+            salt = user["salt"]
+            user_pub = user["public_key"].encode('utf-8')
+            challenge, _ = encrypt_aes("OK".encode('utf-8'), password)       
+            challenge_string =\
+            f"{b64encode(salt).decode('utf-8')}|{b64encode(challenge).decode('utf-8')}"
+            writer.write(send_encrypted(
+                encrypt_aes(challenge_string.encode('utf-8')), user_pub
+                ).encode('utf-8'))
+    
+            data = await reader.read(1024)
+            response = data.decode('utf-8')
+            if response == "OK":
+                client_sockets.add(writer)
+                authenticated_users[username] = writer
+                f_codes[username] = generate_sha256()
+                print(f"[+] {username} authenticated successfully.")
+                asyncio.create_task(listen_for_client(reader, writer, username))
+                break
+            else:
+                print(f"[-] {username} failed to authenticate.")
+        else:
+            print(f"[-] No such user as {username}." if user == None\
+                   else f"[-] {cli_addr} tries to connect as {username}")
     conn.close()
 
 async def main():
