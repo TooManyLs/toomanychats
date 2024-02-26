@@ -11,6 +11,7 @@ from Crypto.PublicKey import RSA
 
 from widgets.enter_screen import EnterWidget
 from widgets.signin_screen import SignIn
+from widgets.signup_screen import SignUp
 from widgets.chat_screen import ChatWidget
 
 SERVER_HOST = "127.0.0.1"
@@ -23,6 +24,7 @@ class MainWindow(QMainWindow):
         print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
         self.s.connect((SERVER_HOST, SERVER_PORT))
         self.server_pubkey = RSA.import_key(self.s.recv(1024))
+        # self.server_pubkey = ""
         print("[+] Connected.")
 
         self.setWindowTitle("TooManyChats")
@@ -32,12 +34,14 @@ class MainWindow(QMainWindow):
         # Screens' initialization
         self.enter_widget = EnterWidget(self.stacked_layout)
         self.sign_in = SignIn(self.stacked_layout, self.s, self.server_pubkey)
+        self.sign_up = SignUp(self.stacked_layout, self.s, self.server_pubkey)
         self.main_widget = ChatWidget(self.stacked_layout, self.s, self.server_pubkey)
 
         # Add the widgets to the QStackedLayout
         self.stacked_layout.addWidget(self.enter_widget)    # 0
         self.stacked_layout.addWidget(self.sign_in)         # 1
-        self.stacked_layout.addWidget(self.main_widget)     # 2
+        self.stacked_layout.addWidget(self.sign_up)         # 2
+        self.stacked_layout.addWidget(self.main_widget)     # 3
 
         container = QWidget()
         container.setLayout(self.stacked_layout)

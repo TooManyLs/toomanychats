@@ -78,26 +78,30 @@ async def handle_command(cmd, reader, writer, username=None):
                 writer.write("approve".encode('utf-8'))
         except (KeyError, ValueError):
             writer.write("reject".encode('utf-8'))
-            return  
-        data = await reader.read(2048)
-        reg_info = data.decode('utf-8')
-        reg_info, aes, pub = recv_encrypted(reg_info)
-        aes = s_cipher.decrypt(aes)
-        reg_info = decrypt_aes(reg_info, aes).decode('utf-8')
-        name, passw, salt, pubkey = reg_info.split("|")
-        if db.get_user(conn, name, "name") is None:
-            writer.write(f"[+] You've successfully created an account!".encode('utf-8'))
-            f_codes[friend] = generate_sha256()
-            db.add_user(
-                conn,
-                name,
-                b64decode(passw.encode('utf-8')),
-                b64decode(salt),
-                pubkey.encode('utf-8')
-            )
-        else:
-            writer.write(f"[-] {name} is not available.".encode('utf-8'))
-            pass
+            return
+        while True:
+            data = await reader.read(2048)
+            reg_info = data.decode('utf-8')
+            if reg_info == "c":
+                return
+            reg_info, aes, pub = recv_encrypted(reg_info)
+            aes = s_cipher.decrypt(aes)
+            reg_info = decrypt_aes(reg_info, aes).decode('utf-8')
+            name, passw, salt, pubkey = reg_info.split("|")
+            if db.get_user(conn, name, "name") is None:
+                writer.write(f"[+] You've successfully created an account!".encode('utf-8'))
+                f_codes[friend] = generate_sha256()
+                db.add_user(
+                    conn,
+                    name,
+                    b64decode(passw.encode('utf-8')),
+                    b64decode(salt),
+                    pubkey.encode('utf-8')
+                )
+                break
+            else:
+                writer.write(f"[-] {name} is not available.".encode('utf-8'))
+                continue
     elif cmd == "/userlist":
         user = db.get_user(conn, username, "public_key")
         user_pub = user["public_key"].encode('utf-8')
@@ -127,6 +131,9 @@ async def handle_client(reader, writer):
         username = ""
         if first_resp == "/signup":
             await handle_command("/signup", reader, writer)
+            continue
+        elif first_resp == "c":
+            continue
         else:
             username = first_resp
         if not username:
@@ -158,6 +165,7 @@ async def handle_client(reader, writer):
         else:
             print(f"[-] No such user as {username}." if user == None\
                    else f"[-] {cli_addr} tries to connect as {username}")
+            writer.write("failed".encode('utf-8'))
     conn.close()
 
 async def main():
