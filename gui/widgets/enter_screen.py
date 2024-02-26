@@ -38,6 +38,7 @@ class EnterWidget(QWidget):
                 border-radius: 6px;
                 font-size: 16px;
                 font-weight: 600;
+                outline: none;
             }
             QPushButton:hover{
                 background-color: #3e3e3e;

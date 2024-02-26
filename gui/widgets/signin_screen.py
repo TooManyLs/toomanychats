@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QPushButton,
-    QLineEdit,
     )
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV
 from PySide6.QtCore import QRegularExpression as Q_re
@@ -43,8 +42,6 @@ class SignIn(QWidget):
         self.incorrect.setObjectName("invalid")
         self.btn.setObjectName("signin")
         self.reg.setObjectName("reg")
-        self.btn.setFlat(True)
-        self.reg.setFlat(True)
 
         valid_name = Q_reV(Q_re("[a-zA-Z0-9_]{3,20}"))
         valid_pass = Q_reV(Q_re("^.{8,50}$"))
@@ -75,6 +72,7 @@ class SignIn(QWidget):
 
         self.setStyleSheet(
             """
+            QPushButton{outline: none;}
             #signin{
                 background-color: #2e2e2e;
                 height: 45px;
@@ -82,9 +80,7 @@ class SignIn(QWidget):
                 font-size: 16px;
                 font-weight: 600;
             }
-            #signin:hover{
-                background-color: #3e3e3e;
-            }
+            #signin:hover{background-color: #3e3e3e;}
             #signin:pressed{background-color: #5e5e5e;}
             #reg{
                 border: none;
@@ -106,6 +102,7 @@ class SignIn(QWidget):
             }
             """
             )
+        self.fields = self.findChildren(TextField)
 
         self.btn.clicked.connect(self.sign_in)
         self.reg.clicked.connect(self.sign_up)
@@ -113,6 +110,7 @@ class SignIn(QWidget):
     def sign_in(self):
         self.inv_n.setText("")
         self.inv_p.setText("")
+        self.incorrect.setText("")
         if self.pass_f.hasAcceptableInput() and self.name_f.hasAcceptableInput():
             name = self.name_f.text()
             password = self.pass_f.text()
@@ -123,6 +121,8 @@ class SignIn(QWidget):
                     my_pvtkey = RSA.import_key(f.read())
                 my_cipher = PKCS1_OAEP.new(my_pvtkey)
                 data = self.s.recv(2048).decode('utf-8')
+                if data == "failed":
+                    raise Exception
                 data, aes, pub = recv_encrypted(data)
                 aes = my_cipher.decrypt(aes)
                 server_resp = decrypt_aes(data, aes).decode('utf-8')
@@ -134,7 +134,9 @@ class SignIn(QWidget):
                     connected = encrypt_aes(f"{name} connected."\
                                             .encode('utf-8'))
                     self.s.send(send_encrypted(connected, self.server_pubkey).encode('utf-8'))
-                    self.stacked_layout.setCurrentIndex(2)
+                    for f in self.fields:
+                        f.clear()
+                    self.stacked_layout.setCurrentIndex(3)
                     return name, my_cipher
             except Exception:
                 self.s.send("Fail".encode('utf-8'))
@@ -143,8 +145,9 @@ class SignIn(QWidget):
         if not self.pass_f.hasAcceptableInput():
             self.inv_p.setText("Invalid password (8-50 characters)")
         if not self.name_f.hasAcceptableInput():
-            self.inv_n.setText("Invalid password (3-20 characters)")
+            self.inv_n.setText("Invalid name (3-20 characters)")
     
     def sign_up(self):
-        print("go to sign up screen")
-        # self.stacked_layout.setCurrentIndex()
+        for f in self.fields:
+                f.clear()
+        self.stacked_layout.setCurrentIndex(2)
