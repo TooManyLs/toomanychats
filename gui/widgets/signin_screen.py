@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     )
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV
-from PySide6.QtCore import QRegularExpression as Q_re
+from PySide6.QtCore import QRegularExpression as Q_re, Signal
 from widgets.utils.encryption import (
     encrypt_aes, 
     decrypt_aes, 
@@ -20,6 +20,7 @@ from Crypto.PublicKey import RSA
 from base64 import b64decode
 
 class SignIn(QWidget):
+    name_signal = Signal(str)
     def __init__(self, stacked_layout, s, server_pubkey):
         super().__init__()
         self.stacked_layout = stacked_layout
@@ -137,11 +138,10 @@ class SignIn(QWidget):
                     for f in self.fields:
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
-                    return name, my_cipher
+                    self.name_signal.emit(name)
             except Exception:
                 self.s.send("Fail".encode('utf-8'))
                 self.incorrect.setText("Failed to authenticate:\nInvalid username or password.")
-            print(name, password)
         if not self.pass_f.hasAcceptableInput():
             self.inv_p.setText("Invalid password (8-50 characters)")
         if not self.name_f.hasAcceptableInput():

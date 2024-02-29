@@ -37,7 +37,8 @@ class MainWindow(QMainWindow):
         self.sign_up = SignUp(self.stacked_layout, self.s, self.server_pubkey)
         self.main_widget = ChatWidget(self.stacked_layout, self.s, self.server_pubkey)
 
-        # Add the widgets to the QStackedLayout
+        self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
+
         self.stacked_layout.addWidget(self.enter_widget)    # 0
         self.stacked_layout.addWidget(self.sign_in)         # 1
         self.stacked_layout.addWidget(self.sign_up)         # 2
@@ -49,6 +50,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         atexit.register(self.quit)
+        self.setMinimumWidth(400)
 
     def quit(self):
         self.s.close()
