@@ -1,35 +1,76 @@
 from PySide6.QtWidgets import (
     QApplication, 
     QMainWindow, 
-    QVBoxLayout, 
-    QHBoxLayout, 
+    QVBoxLayout,  
     QWidget, 
-    QLabel, 
     QTextEdit, 
     QPushButton, 
     QScrollArea,
     QSpacerItem,
     QSizePolicy,
-    QFrame
     )
-from PySide6.QtGui import QFontMetrics, QPainter, QColor
+from PySide6.QtGui import (
+    QFontMetrics, 
+    QTextLayout, 
+    QPainter, 
+    QColor, 
+    QTextOption, 
+    QTextDocument,
+    )
 from PySide6.QtCore import Qt
 import datetime
-
 
 class CustomTextEdit(QTextEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time_text = datetime.datetime.now().strftime("%I:%M %p")
+        self.metrics = QFontMetrics(self.font())
+        self.padding = " " * 28 + "\u200B"
+        self.setReadOnly(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def focusOutEvent(self, event):       
+        text_cursor = self.textCursor()
+        text_cursor.clearSelection()
+        self.setTextCursor(text_cursor)
+
+        super().focusOutEvent(event)
 
     def paintEvent(self, event):
+        text = self.toPlainText()
+        parent_width = self.parent().parent().parent().size().width()
+        lines = text.split('\n')
+        text_width = max(self.metrics.horizontalAdvance(line) for line in lines) + 85
+        if text_width > parent_width * 0.8:
+            text_width = parent_width * 0.8
+
+        self.setFixedWidth(min(text_width, 500))
+
+        hor_adv = self.metrics.horizontalAdvance(text)
+
+        if ((hor_adv >= self.width()
+        or (hor_adv + 80 >= self.width()
+        and self.height() == 27.0))
+        and not self.padding in text):
+            self.setText(text + self.padding)
+        elif (hor_adv < self.width()
+        and self.padding in text):
+            self.setText(text[:-29])
+
+        doc = QTextDocument(self.toPlainText())
+        doc.setDefaultFont(self.font())
+        doc.setTextWidth(self.width())
+        text_height = doc.size().height() + 3
+
+        self.setFixedHeight(text_height)
+
         super().paintEvent(event)
 
         painter = QPainter(self.viewport())
         painter.setPen(QColor('lightgray'))
         rect = self.rect()
-        rect.setRight(rect.right() - 15)  # Move 5px to the left
-        rect.setBottom(rect.bottom() - 6)  # Move 5px up
+        rect.setRight(rect.right() - 15)
+        rect.setBottom(rect.bottom() - 6)
         painter.drawText(rect, Qt.AlignBottom | Qt.AlignRight, self.time_text)
 
 class ChatBubble(QWidget):
@@ -37,45 +78,26 @@ class ChatBubble(QWidget):
         super().__init__()
 
         self.text_label = CustomTextEdit()
-        self.text_label.setStyleSheet(
-            """
-            border: 1px solid black; 
-            padding-left: 5px; 
-            border-radius: 10px; 
-            background-color: #2e2e2e;
-            color: white;
-            """
-            )
-        self.text_label.setReadOnly(True)
-        self.text_label.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
         self.text_label.setText(text)
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.text_label)
         self.setLayout(layout)
-        self.text_label.setStyleSheet(
+        self.setStyleSheet(
             """
             padding-left: 5px; 
-            border-radius: 10px; 
+            padding-right: 5px; 
+            border-radius: 12px; 
             background-color: #2e2e2e;
             color: white;
             """
             )
-
-        metrics = QFontMetrics(self.text_label.font())
-        max_width = 500
-        text_width = 0
-        for i in range(self.text_label.document().blockCount()):
-            block = self.text_label.document().findBlockByNumber(i)
-            line = block.text()
-            width = metrics.horizontalAdvance(line) + 95
-            text_width = max(text_width, width)
-        self.one_line_height = self.text_label.fontMetrics().lineSpacing()
-        lines = (text_width // max_width) + self.text_label.document().blockCount()
-        text_height = lines * self.one_line_height + 29
-        self.setMinimumSize(min(text_width, max_width), text_height)
-        self.setMaximumSize(min(text_width, max_width), text_height)
+    def paintEvent(self, event):
+        h = self.text_label.size().height()
+        w = self.text_label.size().width()
+        self.setMaximumSize(w + 5, h)
+        return super().paintEvent(event)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -89,7 +111,8 @@ class MainWindow(QMainWindow):
         self.scroll_area.setWidget(self.chat_area)
 
         self.layout = QVBoxLayout(self.chat_area)
-        self.layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        self.layout.setSpacing(5)
+        self.layout.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         self.text_input = QTextEdit()
         self.send_button = QPushButton("Send")
@@ -103,15 +126,16 @@ class MainWindow(QMainWindow):
         main_widget = QWidget()
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
+        self.setMinimumWidth(400)
 
     def send_message(self):
         message = self.text_input.toPlainText().strip()
         if message:
             bubble = ChatBubble(message)
-            self.layout.addWidget(bubble)
+            self.layout.addWidget(bubble, alignment=Qt.AlignRight)
             self.text_input.clear()
-
-app = QApplication([])
-window = MainWindow()
-window.show()
-app.exec()
+if __name__ == "__main__":
+    app = QApplication([])
+    window = MainWindow()
+    window.show()
+    app.exec()
