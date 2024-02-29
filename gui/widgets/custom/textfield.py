@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QPushButton, 
     QHBoxLayout,
     )
-from PySide6.QtGui import QPainter, QTextDocumentFragment, QIcon, QTextBlockFormat
+from PySide6.QtGui import QPainter, QTextDocumentFragment, QIcon
 from PySide6.QtCore import Qt, QSize
 
 class TextField(QLineEdit):
