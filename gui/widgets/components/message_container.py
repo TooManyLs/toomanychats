@@ -10,11 +10,9 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     )
 from PySide6.QtGui import (
-    QFontMetrics, 
-    QTextLayout, 
+    QFontMetrics,  
     QPainter, 
     QColor, 
-    QTextOption, 
     QTextDocument,
     )
 from PySide6.QtCore import Qt
@@ -25,7 +23,7 @@ class CustomTextEdit(QTextEdit):
         super().__init__(*args, **kwargs)
         self.time_text = datetime.datetime.now().strftime("%I:%M %p")
         self.metrics = QFontMetrics(self.font())
-        self.padding = " " * 28 + "\u200B"
+        self.padding = " " * 20 + "\u200B"
         self.setReadOnly(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -46,21 +44,11 @@ class CustomTextEdit(QTextEdit):
 
         self.setFixedWidth(min(text_width, 500))
 
-        hor_adv = self.metrics.horizontalAdvance(text)
-
-        if ((hor_adv >= self.width()
-        or (hor_adv + 80 >= self.width()
-        and self.height() == 27.0))
-        and not self.padding in text):
-            self.setText(text + self.padding)
-        elif (hor_adv < self.width()
-        and self.padding in text):
-            self.setText(text[:-29])
-
-        doc = QTextDocument(self.toPlainText())
+        doc = QTextDocument(self.toPlainText() + self.padding)
         doc.setDefaultFont(self.font())
         doc.setTextWidth(self.width())
-        text_height = doc.size().height() + 3
+        doc.setDocumentMargin(9.0)
+        text_height = doc.size().height() - 6
 
         self.setFixedHeight(text_height)
 
