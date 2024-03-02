@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QPushButton, 
     QHBoxLayout,
     )
-from PySide6.QtGui import QPainter, QTextDocumentFragment, QIcon
+from PySide6.QtGui import QPainter, QTextDocumentFragment, QIcon, QTextDocument
 from PySide6.QtCore import Qt, QSize
 
 class TextField(QLineEdit):
@@ -74,20 +74,24 @@ class TextArea(QTextEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.textChanged.connect(self.compute_size)
         self.one_line_height = self.fontMetrics().lineSpacing()
-        self.setMinimumHeight(self.one_line_height + 12)
         self.setMaximumHeight(self.one_line_height * 12 + 12)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-    def compute_size(self):
-        height = self.document().blockCount() * self.one_line_height + 12
-        if height <= self.maximumHeight():
-            self.setMinimumHeight(height)
-            self.updateGeometry()
-            self.adjustSize()
+    def compute_height(self):
+        doc = QTextDocument(self.toPlainText())
+        doc.setDefaultFont(self.font())
+        doc.setTextWidth(self.width())
+        text_height = doc.size().height() + 4
+
+        if text_height <= self.maximumHeight():
+            self.setMinimumHeight(text_height)
         else:
             self.setMinimumHeight(self.maximumHeight())
+
+    def paintEvent(self, event):
+        self.compute_height()
+        return super().paintEvent(event)
     
     def insertFromMimeData(self, source):
         text = source.text()
