@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,  
     QWidget, 
     QTextEdit, 
+    QTextBrowser, 
     QPushButton, 
     QScrollArea,
     QSpacerItem,
@@ -18,23 +19,24 @@ from PySide6.QtGui import (
 from PySide6.QtCore import Qt
 import datetime
 
-class CustomTextEdit(QTextEdit):
+class TextBubble(QTextBrowser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time_text = datetime.datetime.now().strftime("%I:%M %p")
         self.metrics = QFontMetrics(self.font())
         self.padding = " " * 20 + "\u200B"
-        self.setReadOnly(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setStyleSheet(
+            """
+            padding-left: 5px; 
+            padding-right: 5px; 
+            border-radius: 12px; 
+            background-color: #2e2e2e;
+            color: white;
+            """
+            )
 
-    def focusOutEvent(self, event):       
-        text_cursor = self.textCursor()
-        text_cursor.clearSelection()
-        self.setTextCursor(text_cursor)
-
-        super().focusOutEvent(event)
-
-    def paintEvent(self, event):
+    def compute_size(self):
         text = self.toPlainText()
         parent_width = self.parent().parent().parent().size().width()
         lines = text.split('\n')
@@ -52,39 +54,40 @@ class CustomTextEdit(QTextEdit):
 
         self.setFixedHeight(text_height)
 
+    def focusOutEvent(self, event):       
+        text_cursor = self.textCursor()
+        text_cursor.clearSelection()
+        self.setTextCursor(text_cursor)
+
+        super().focusOutEvent(event)
+
+    def paintEvent(self, event):
+        self.compute_size()
         super().paintEvent(event)
 
         painter = QPainter(self.viewport())
         painter.setPen(QColor('lightgray'))
         rect = self.rect()
-        rect.setRight(rect.right() - 15)
-        rect.setBottom(rect.bottom() - 6)
+        rect.setRight(rect.right() - 12)
+        rect.setBottom(rect.bottom() - 3)
         painter.drawText(rect, Qt.AlignBottom | Qt.AlignRight, self.time_text)
 
 class ChatBubble(QWidget):
     def __init__(self, text):
         super().__init__()
 
-        self.text_label = CustomTextEdit()
-        self.text_label.setText(text)
+        self.text_label = TextBubble()
+        self.text_label.setPlainText(text)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.text_label)
         self.setLayout(layout)
-        self.setStyleSheet(
-            """
-            padding-left: 5px; 
-            padding-right: 5px; 
-            border-radius: 12px; 
-            background-color: #2e2e2e;
-            color: white;
-            """
-            )
+
     def paintEvent(self, event):
         h = self.text_label.size().height()
         w = self.text_label.size().width()
-        self.setMaximumSize(w + 5, h)
+        self.setMaximumSize(w, h)
         return super().paintEvent(event)
 
 class MainWindow(QMainWindow):
