@@ -2,7 +2,7 @@ from datetime import datetime
 
 from PySide6.QtWidgets import (
     QVBoxLayout, 
-    QTextBrowser, 
+    QTextEdit, 
     QPushButton, 
     QSizePolicy,
     )
@@ -10,14 +10,16 @@ from PySide6.QtGui import (
     QFontMetrics, 
     QPainter, 
     QColor, 
-    QTextDocument,
+    QTextDocument, 
+    QCursor,
     )
 from PySide6.QtCore import Qt
 
-class TextBubble(QTextBrowser):
+class TextBubble(QTextEdit):
     def __init__(self, text, name=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setPlainText(text)
+        self.setReadOnly(True)
         self.name = name
         self.time_text = datetime.now().strftime("%I:%M %p")
         self.metrics = QFontMetrics(self.font())
@@ -35,6 +37,7 @@ class TextBubble(QTextBrowser):
         if name:
             self.setViewportMargins(0, 14, 0, 0)
             self.name = QPushButton(name)
+            self.name.setCursor(QCursor(Qt.PointingHandCursor))
             self.name.clicked.connect(lambda: print(f"pushed {name}"))
             self.name.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
             self.name.setMaximumWidth(
