@@ -1,5 +1,4 @@
 import os
-import time
 from base64 import b64encode
 
 from PySide6.QtWidgets import (
@@ -34,14 +33,14 @@ class SignUp(QWidget):
         self.back_btn.setIcon(QIcon("./public/arrow.png"))
         self.back.addWidget(self.back_btn, 0, 0)
         self.back.setColumnStretch(0, 1)
-        self.back.setColumnStretch(1, 1)
+        self.back.setColumnStretch(1, 2)
         self.back.setColumnStretch(2, 1)
         self.back.setRowStretch(0, 1)
-        self.back.setRowStretch(2, 1)
+        self.back.setRowStretch(2, 2)
         self.back_btn.setObjectName("back")
 
-        self.friend_code = TextField("Friend code", "#2e2e2e")
-        self.friend_name = TextField("Friend username", "#2e2e2e")
+        self.friend_code = TextField("Friend code:", "#2e2e2e")
+        self.friend_name = TextField("Friend username:", "#2e2e2e")
         self.check_btn = QPushButton("Check")
         self.inv_code = QLabel()
 
@@ -96,7 +95,7 @@ class SignUp(QWidget):
         self.form_frame = QFrame()
         self.form_frame.setLayout(self.form)
         self.form_frame.hide()
-        
+
         self.main_layout.addWidget(self.code_frame, 1, 1)
         self.main_layout.addWidget(self.form_frame, 1, 1)
         self.main_layout.addItem(self.back, 0, 0, -1, 1)
