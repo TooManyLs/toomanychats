@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QApplication, 
     QMainWindow, 
     QVBoxLayout,  
-    QHBoxLayout, 
+    QHBoxLayout,  
     QWidget, 
     QPushButton, 
     QScrollArea,
@@ -10,8 +10,9 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 
-from components import TextBubble
+from components import TextBubble, SingleImage
 from custom import TextArea
 
 class MainWindow(QMainWindow):
@@ -22,11 +23,11 @@ class MainWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(
-            lambda: self.scroll_area.verticalScrollBar().setValue(
-                self.scroll_area.verticalScrollBar().maximum()
-            )
-        )
+        # self.scroll_area.verticalScrollBar().rangeChanged.connect(
+        #     lambda: self.scroll_area.verticalScrollBar().setValue(
+        #         self.scroll_area.verticalScrollBar().maximum()
+        #     )
+        # )
 
         self.chat_area = QWidget()
         self.scroll_area.setWidget(self.chat_area)
@@ -64,6 +65,11 @@ Farewell, all joys;
 Oh death, come close mine eyes;
 More geese than swans now live, more fools than wise.""", 
         )
+        img = SingleImage()
+        pixmap = QPixmap("E:/Dloads/monke1.jpg")
+        img.setPixmap(pixmap)
+        img.setScaledContents(True)
+        self.layout.addWidget(img, alignment=Qt.AlignRight)
         self.layout.addWidget(dft, alignment=Qt.AlignLeft)
         self.layout.addWidget(dft3, alignment=Qt.AlignRight)
         self.layout.addWidget(dft2, alignment=Qt.AlignLeft)
@@ -79,5 +85,6 @@ if __name__ == "__main__":
     app = QApplication([])
     app.setStyle("Fusion")
     window = MainWindow()
+    window.resize(400, 800)
     window.show()
     app.exec()
