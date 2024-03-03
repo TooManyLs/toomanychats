@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -9,18 +11,17 @@ from PySide6.QtWidgets import (
     )
 from PySide6.QtGui import Qt
 from PySide6.QtCore import Slot, Signal, QObject, QThread
-from datetime import datetime
-from widgets.utils.encryption import (
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.PublicKey import RSA
+
+from .utils.encryption import (
     encrypt_aes, 
     send_encrypted,
     decrypt_aes,
     recv_encrypted,
     )
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
-
-from widgets.custom.textfield import TextArea
-from widgets.components.message_container import ChatBubble
+from .custom import TextArea
+from .components import TextBubble
 
 class Worker(QObject):
     finished = Signal()
@@ -39,7 +40,6 @@ class Worker(QObject):
                 data, aes, pub = recv_encrypted(data)
                 aes = self.my_cipher.decrypt(aes)
                 msg = decrypt_aes(data, aes).decode('utf-8')
-                msg = msg.replace("<SEP>", ": ", 1)
                 self.message_received.emit(msg)
             except Exception:
                 break
@@ -51,9 +51,6 @@ class ChatWidget(QWidget):
         self.stacked_layout = stacked_layout
         self.s = s
         self.server_pubkey = server_pubkey
-
-        self.name = ""
-        self.my_cipher = None
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -69,7 +66,8 @@ class ChatWidget(QWidget):
 
         self.layout = QVBoxLayout(self.chat_area)
         self.layout.setSpacing(5)
-        self.layout.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        self.layout.addItem(
+            QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         main_layout = QVBoxLayout()
 
@@ -112,19 +110,21 @@ class ChatWidget(QWidget):
     @Slot(str)
     def on_message_received(self, msg):
         if msg[:8] == "[Server]":
-            bubble = ChatBubble(msg)
+            bubble = TextBubble(msg)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
         else:
-            bubble = ChatBubble(msg)
+            msg, nametag = msg.rsplit("|", 1)
+            bubble = TextBubble(msg, nametag)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
 
     def on_send(self):
         to_send: str = self.send_field.toPlainText().strip()
         if to_send:
-            bubble = ChatBubble(to_send)
+            bubble = TextBubble(to_send)
             self.layout.addWidget(bubble, alignment=Qt.AlignRight)
-            to_send = encrypt_aes(to_send.encode('utf-8'))
-            self.s.send(send_encrypted(to_send, self.server_pubkey).encode('utf-8'))
-            self.send_field.clear()
+            to_send = encrypt_aes((to_send + f"|{self.name}").encode('utf-8'))
+            self.s.send(send_encrypted(to_send, self.server_pubkey)
+                        .encode('utf-8'))
+        self.send_field.clear()
     
     
