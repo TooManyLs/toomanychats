@@ -1,11 +1,12 @@
+from base64 import b64decode, b64encode
+import json
+
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Protocol.KDF import PBKDF2
-from base64 import b64decode, b64encode
-import json
 
 def generate_key(passw, salt, lenght=32):
     return PBKDF2(passw, salt, dkLen=lenght, count=1000000)

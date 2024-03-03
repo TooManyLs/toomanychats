@@ -1,3 +1,5 @@
+from base64 import b64decode
+
 from PySide6.QtWidgets import (
     QWidget,
     QGridLayout,
@@ -7,17 +9,17 @@ from PySide6.QtWidgets import (
     )
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV
 from PySide6.QtCore import QRegularExpression as Q_re, Signal
-from widgets.utils.encryption import (
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.PublicKey import RSA
+
+from .utils.encryption import (
     encrypt_aes, 
     decrypt_aes, 
     generate_key, 
     send_encrypted,
     recv_encrypted
     )
-from widgets.custom.textfield import TextField
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
-from base64 import b64decode
+from .custom import TextField
 
 class SignIn(QWidget):
     name_signal = Signal(str)
@@ -112,7 +114,8 @@ class SignIn(QWidget):
         self.inv_n.setText("")
         self.inv_p.setText("")
         self.incorrect.setText("")
-        if self.pass_f.hasAcceptableInput() and self.name_f.hasAcceptableInput():
+        if (self.pass_f.hasAcceptableInput()
+                and self.name_f.hasAcceptableInput()):
             name = self.name_f.text()
             password = self.pass_f.text()
 
@@ -129,19 +132,22 @@ class SignIn(QWidget):
                 server_resp = decrypt_aes(data, aes).decode('utf-8')
                 salt, challenge = server_resp.split("|")
                 key = generate_key(password, b64decode(salt.encode('utf-8')))
-                response = decrypt_aes(b64decode(challenge.encode('utf-8')), key).decode('utf-8')
+                response = decrypt_aes(b64decode(challenge.encode('utf-8')),
+                                       key).decode('utf-8')
                 if response == "OK":
                     self.s.send("OK".encode('utf-8'))
-                    connected = encrypt_aes(f"{name} connected."\
+                    connected = encrypt_aes(f"{name} connected."
                                             .encode('utf-8'))
-                    self.s.send(send_encrypted(connected, self.server_pubkey).encode('utf-8'))
+                    self.s.send(send_encrypted(connected, self.server_pubkey)
+                                .encode('utf-8'))
                     for f in self.fields:
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
                     self.name_signal.emit(name)
             except Exception:
                 self.s.send("Fail".encode('utf-8'))
-                self.incorrect.setText("Failed to authenticate:\nInvalid username or password.")
+                self.incorrect.setText(
+                    "Failed to authenticate:\nInvalid username or password.")
         if not self.pass_f.hasAcceptableInput():
             self.inv_p.setText("Invalid password (8-50 characters)")
         if not self.name_f.hasAcceptableInput():

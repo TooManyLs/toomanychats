@@ -1,4 +1,11 @@
+import asyncio
 import socket
+from base64 import b64encode, b64decode
+
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+import database as db
 from encryption import (
     encrypt_aes, 
     decrypt_aes, 
@@ -6,11 +13,6 @@ from encryption import (
     send_encrypted, 
     recv_encrypted
     )
-from base64 import b64encode, b64decode
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP
-import asyncio
-import database as db
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
@@ -50,7 +52,8 @@ async def listen_for_client(reader, writer, username):
                                 (msg, dec_key), pubkey
                                 ).encode('utf-8'))
                 else:
-                    user = db.get_by_pubkey(conn, pub.export_key().decode('utf-8'))
+                    user = db.get_by_pubkey(conn, 
+                                            pub.export_key().decode('utf-8'))
                     cli = authenticated_users[user]
                     cli.write(send_encrypted(msg, aes), pub).encode('utf-8')
                     continue
@@ -73,6 +76,8 @@ async def handle_command(cmd, reader, writer, username=None):
     if cmd == "/signup":
         try:
             data = await reader.read(1024)
+            if data.decode('utf-8') == "c":
+                return
             friend_code, friend = data.decode('utf-8').split("|")
             if f_codes[friend] == friend_code:
                 writer.write("approve".encode('utf-8'))
@@ -89,7 +94,8 @@ async def handle_command(cmd, reader, writer, username=None):
             reg_info = decrypt_aes(reg_info, aes).decode('utf-8')
             name, passw, salt, pubkey = reg_info.split("|")
             if db.get_user(conn, name, "name") is None:
-                writer.write(f"[+] You've successfully created an account!".encode('utf-8'))
+                writer.write(f"[+] You've successfully created an account!"
+                             .encode('utf-8'))
                 f_codes[friend] = generate_sha256()
                 db.add_user(
                     conn,

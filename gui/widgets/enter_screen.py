@@ -6,9 +6,10 @@ from PySide6.QtWidgets import (
     )
 
 class EnterWidget(QWidget):
-    def __init__(self, stacked_layout):
+    def __init__(self, stacked_layout, s):
         super().__init__()
         self.stacked_layout = stacked_layout
+        self.s = s
 
         layout = QGridLayout()
 
@@ -64,4 +65,5 @@ class EnterWidget(QWidget):
         self.stacked_layout.setCurrentIndex(1)
 
     def on_sign_up_clicked(self):
+        self.s.send("/signup".encode('utf-8'))
         self.stacked_layout.setCurrentIndex(2)

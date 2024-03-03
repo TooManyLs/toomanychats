@@ -1,5 +1,7 @@
 import os
 import time
+from base64 import b64encode
+
 from PySide6.QtWidgets import (
     QWidget,
     QGridLayout,
@@ -11,13 +13,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV, QIcon
 from PySide6.QtCore import QRegularExpression as Q_re
 from Crypto.PublicKey import RSA
-from widgets.utils.encryption import (
+
+from .utils.encryption import (
     encrypt_aes, 
     generate_key, 
     send_encrypted,
     )
-from widgets.custom.textfield import TextField
-from base64 import b64encode
+from .custom import TextField
 
 class SignUp(QWidget):
     def __init__(self, stacked_layout, s, server_pubkey):
@@ -47,7 +49,6 @@ class SignUp(QWidget):
         self.friend_name.setObjectName("text-field")
         self.check_btn.setObjectName("btn")
         self.inv_code.setObjectName("invalid")
-
 
         self.name_f = TextField("Username:", "#2e2e2e")
         self.pass_f = TextField("Password:", "#2e2e2e", True)
@@ -158,9 +159,10 @@ class SignUp(QWidget):
     
     def check_code(self):
         self.inv_code.setText("")
-        self.s.send("/signup".encode('utf-8'))
-        time.sleep(0.1)
-        friend_code = "|".join([self.friend_code.text(), self.friend_name.text()])
+        friend_code = "|".join([
+            self.friend_code.text(), 
+            self.friend_name.text()
+            ])
         self.s.send(friend_code.encode('utf-8'))
         resp = self.s.recv(1024).decode('utf-8')
         if resp == "approve":
@@ -181,24 +183,27 @@ class SignUp(QWidget):
         password = self.pass_f.text()
         confirm = self.pass_confirm.text()
         
-        if (self.name_f.hasAcceptableInput() 
-            and self.pass_f.hasAcceptableInput() 
-            and password == confirm):
+        if (self.name_f.hasAcceptableInput()
+                and self.pass_f.hasAcceptableInput()
+                and password == confirm):
             salt = os.urandom(16)
             hash = generate_key(password, salt)
             rsa_keys = RSA.generate(2048)
             pubkey = rsa_keys.public_key().export_key()
             pvtkey = rsa_keys.export_key()
-            data = encrypt_aes(f"{name}|{b64encode(hash).decode('utf-8')}|\
-{b64encode(salt).decode('utf-8')}|\
-{pubkey.decode('utf-8')}".encode('utf-8'))
-            self.s.send(send_encrypted(data, self.server_pubkey).encode('utf-8'))
+            data = encrypt_aes(f"{name}|{b64encode(hash).decode('utf-8')}|"
+                               + f"{b64encode(salt).decode('utf-8')}|"
+                               + f"{pubkey.decode('utf-8')}"
+                                .encode('utf-8'))
+            self.s.send(send_encrypted(data, self.server_pubkey)
+                        .encode('utf-8'))
             ok = self.s.recv(1024).decode('utf-8')
             if "[+]" in ok:
                 with open(f"keys/{name}_private.pem", "wb") as f:
                     f.write(pvtkey)
             else:
-                self.inv_taken.setText(f"This username ({name}) is already taken.")
+                self.inv_taken.setText(
+                    f"This username ({name}) is already taken.")
                 return
             for f in self.fields:
                 f.clear()

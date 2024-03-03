@@ -1,6 +1,7 @@
 import sys
 import atexit
 import socket
+
 from PySide6.QtWidgets import (
     QApplication, 
     QMainWindow, 
@@ -9,10 +10,10 @@ from PySide6.QtWidgets import (
     )
 from Crypto.PublicKey import RSA
 
-from widgets.enter_screen import EnterWidget
-from widgets.signin_screen import SignIn
-from widgets.signup_screen import SignUp
-from widgets.chat_screen import ChatWidget
+from widgets import EnterWidget
+from widgets import SignIn
+from widgets import SignUp
+from widgets import ChatWidget
 
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 5002
@@ -32,10 +33,11 @@ class MainWindow(QMainWindow):
         self.stacked_layout = QStackedLayout()
 
         # Screens' initialization
-        self.enter_widget = EnterWidget(self.stacked_layout)
+        self.enter_widget = EnterWidget(self.stacked_layout, self.s)
         self.sign_in = SignIn(self.stacked_layout, self.s, self.server_pubkey)
         self.sign_up = SignUp(self.stacked_layout, self.s, self.server_pubkey)
-        self.main_widget = ChatWidget(self.stacked_layout, self.s, self.server_pubkey)
+        self.main_widget = ChatWidget(self.stacked_layout, 
+                                      self.s, self.server_pubkey)
 
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
 
@@ -49,8 +51,8 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(container)
 
-        atexit.register(self.quit)
         self.setMinimumWidth(400)
+        atexit.register(self.quit)
 
     def quit(self):
         self.s.close()
@@ -59,6 +61,12 @@ app = QApplication(sys.argv)
 app.setStyle("Fusion")
 
 window = MainWindow()
+window.setStyleSheet(
+    """
+    background-color: #1e1e1e;
+    color: white;
+    """
+    )
 window.resize(1000, 800)
 window.show()
 
