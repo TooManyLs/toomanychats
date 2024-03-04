@@ -6,13 +6,17 @@ from PySide6.QtWidgets import (
     QLabel,
     )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QCursor, QPainter, QBrush
+from PySide6.QtGui import QCursor, QPainter, QBrush, QPixmap
 
 class SingleImage(QLabel):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, path, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pixmap = self.pixmap()
+        self.path = path
+        pixmap = QPixmap(path)
+        self.setPixmap(pixmap)
+        self._pixmap = pixmap
         self._resized = False
+        self.setScaledContents(True)
         self.setCursor(QCursor(Qt.PointingHandCursor))
         self.time = datetime.now().strftime("%I:%M %p")
         self.time_text = QLabel(self.time)
@@ -29,9 +33,11 @@ class SingleImage(QLabel):
         layout.setContentsMargins(5,5,5,5)
         layout.addWidget(self.time_text, 
                          alignment=Qt.AlignBottom | Qt.AlignRight)
+        
+        self.counter = 0
 
     def mouseReleaseEvent(self, ev):
-
+        
         return super().mouseReleaseEvent(ev)
 
     def compute_size(self):
@@ -42,13 +48,19 @@ class SingleImage(QLabel):
                                self._pixmap.width()))
         self.setFixedHeight(self.width() * aspect_ratio)
 
+    def resizeEvent(self, event):
+        while self.counter < 1:
+            self.compute_size()
+            self.counter = 1
+        return super().resizeEvent(event)
+
     def setPixmap(self, arg__1):
         if not arg__1:
             return
         self._pixmap = arg__1
     
     def paintEvent(self, arg__1):
-        self.compute_size()
+        # self.compute_size()
         super().paintEvent(arg__1)
 
         painter = QPainter(self)

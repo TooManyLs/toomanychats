@@ -9,7 +9,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QFontMetrics, 
     QPainter, 
-    QColor, 
+    QColor,
+    QResizeEvent, 
     QTextDocument, 
     QCursor,
     )
@@ -56,7 +57,14 @@ class TextBubble(QTextEdit):
                     outline: none;
                 """
                 )
-            layout.addWidget(self.name, alignment=Qt.AlignTop)  
+            layout.addWidget(self.name, alignment=Qt.AlignTop) 
+        self.counter = 0 
+
+    def resizeEvent(self, e: QResizeEvent) -> None:
+        while self.counter < 1:
+            self.compute_size()
+            self.counter = 1
+        return super().resizeEvent(e)
 
     def compute_size(self):
         text = self.toPlainText()
@@ -90,7 +98,7 @@ class TextBubble(QTextEdit):
         super().focusOutEvent(event)
 
     def paintEvent(self, event):
-        self.compute_size()
+        # self.compute_size()
         super().paintEvent(event)
 
         painter = QPainter(self.viewport())
