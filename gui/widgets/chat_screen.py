@@ -8,8 +8,9 @@ from PySide6.QtWidgets import (
     QSpacerItem, 
     QSizePolicy, 
     QScrollArea, 
+    QFileDialog,
     )
-from PySide6.QtGui import Qt
+from PySide6.QtGui import Qt, QIcon, QPixmap
 from PySide6.QtCore import Slot, Signal, QObject, QThread
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
@@ -21,7 +22,7 @@ from .utils.encryption import (
     recv_encrypted,
     )
 from .custom import TextArea
-from .components import TextBubble
+from .components import TextBubble, SingleImage
 
 class Worker(QObject):
     finished = Signal()
@@ -55,11 +56,11 @@ class ChatWidget(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll_area.verticalScrollBar().rangeChanged.connect(
-            lambda: self.scroll_area.verticalScrollBar().setValue(
-                self.scroll_area.verticalScrollBar().maximum()
-            )
-        )
+        # self.scroll_area.verticalScrollBar().rangeChanged.connect(
+        #     lambda: self.scroll_area.verticalScrollBar().setValue(
+        #         self.scroll_area.verticalScrollBar().maximum()
+        #     )
+        # )
 
         self.chat_area = QWidget()
         self.scroll_area.setWidget(self.chat_area)
@@ -71,12 +72,15 @@ class ChatWidget(QWidget):
 
         main_layout = QVBoxLayout()
 
+        attach_icon = QIcon("./public/attach.png")
+        self.attach = QPushButton(icon=attach_icon)
         self.button = QPushButton("Send")
         self.send_field = TextArea()
         self.send_field.setPlaceholderText("Write a message...")
         self.send_field.setObjectName("tarea")
         self.setStyleSheet(
             """
+            QPushButton{border: none;}
             #tarea{
                 border: none;
             }
@@ -84,6 +88,7 @@ class ChatWidget(QWidget):
             )
 
         input_layout = QHBoxLayout()
+        input_layout.addWidget(self.attach)
         input_layout.addWidget(self.send_field)
         input_layout.addWidget(self.button)
 
@@ -93,6 +98,7 @@ class ChatWidget(QWidget):
         self.setLayout(main_layout)
 
         self.button.clicked.connect(self.on_send)
+        self.attach.clicked.connect(self.attach_files)
 
     def listen_for_messages(self, name):
         self.name = name
@@ -126,5 +132,19 @@ class ChatWidget(QWidget):
             self.s.send(send_encrypted(to_send, self.server_pubkey)
                         .encode('utf-8'))
         self.send_field.clear()
+
+    def attach_files(self):
+        files, filter = QFileDialog().getOpenFileNames(
+            self, "Choose files",
+            filter="Image files (*.jpg *.png *.bmp *.webp)")
+        for f in files:
+            img = SingleImage()
+            img.setPixmap(QPixmap(f))
+            self.layout.addWidget(img, alignment=Qt.AlignRight)
+
+    def resizeEvent(self, event):
+        for c in self.chat_area.children():
+            if c.isWidgetType():
+                c.compute_size()
     
     
