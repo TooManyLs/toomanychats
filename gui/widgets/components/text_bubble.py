@@ -98,7 +98,6 @@ class TextBubble(QTextEdit):
         super().focusOutEvent(event)
 
     def paintEvent(self, event):
-        # self.compute_size()
         super().paintEvent(event)
 
         painter = QPainter(self.viewport())

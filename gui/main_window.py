@@ -25,7 +25,6 @@ class MainWindow(QMainWindow):
         print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
         self.s.connect((SERVER_HOST, SERVER_PORT))
         self.server_pubkey = RSA.import_key(self.s.recv(1024))
-        # self.server_pubkey = ""
         print("[+] Connected.")
 
         self.setWindowTitle("TooManyChats")

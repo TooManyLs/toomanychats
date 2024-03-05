@@ -136,10 +136,6 @@ class SignIn(QWidget):
                                        key).decode('utf-8')
                 if response == "OK":
                     self.s.send("OK".encode('utf-8'))
-                    connected = encrypt_aes(f"{name} connected."
-                                            .encode('utf-8'))
-                    self.s.send(send_encrypted(connected, self.server_pubkey)
-                                .encode('utf-8'))
                     for f in self.fields:
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
