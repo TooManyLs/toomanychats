@@ -1,3 +1,6 @@
+import os
+import subprocess
+import platform
 from datetime import datetime
 
 from PySide6.QtWidgets import (
@@ -6,15 +9,25 @@ from PySide6.QtWidgets import (
     QLabel,
     )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QCursor, QPainter, QBrush, QPixmap
+from PySide6.QtGui import QCursor, QPainter, QBrush, QPixmap, QImageReader, QMovie
 
 class SingleImage(QLabel):
     def __init__(self, path, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.path = path
-        pixmap = QPixmap(path)
-        self.setPixmap(pixmap)
-        self._pixmap = pixmap
+        if path[-4:] == ".gif":
+            mov = QMovie(path)
+            self.setMovie(mov)
+            mov.start()
+            self._pixmap = mov
+        else:
+            image_reader = QImageReader(path)
+            image_reader.setAutoTransform(True)
+            image = image_reader.read()
+
+            pixmap = QPixmap.fromImage(image)
+            self.setPixmap(pixmap)
+            self._pixmap = pixmap
         self._resized = False
         self.setScaledContents(True)
         self.setCursor(QCursor(Qt.PointingHandCursor))
@@ -29,29 +42,40 @@ class SingleImage(QLabel):
             border-radius: 10px;
             """
             )
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(5,5,5,5)
-        layout.addWidget(self.time_text, 
-                         alignment=Qt.AlignBottom | Qt.AlignRight)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5,5,5,5)
         
         self.counter = 0
 
     def mouseReleaseEvent(self, ev):
+        absolute_path = os.path.abspath(self.path)
         
+        if platform.system() == 'Windows':
+            os.startfile(absolute_path)
+        elif platform.system() == 'Darwin':  # macOS
+            subprocess.call(('open', absolute_path))
+        else:  # linux variants
+            subprocess.call(('xdg-open', absolute_path))
         return super().mouseReleaseEvent(ev)
 
     def compute_size(self):
+        if isinstance(self._pixmap, QMovie):
+            pixmap = self._pixmap.currentPixmap()
+        else:
+            pixmap = self._pixmap
         parent_width = self.parent().parent().parent().size().width()
-        aspect_ratio = self._pixmap.height() / self._pixmap.width()
+        aspect_ratio = pixmap.height() / pixmap.width()
         self.setFixedWidth(min(parent_width * 0.85, 
                                500, 
-                               self._pixmap.width()))
+                               pixmap.width()))
         self.setFixedHeight(self.width() * aspect_ratio)
 
     def resizeEvent(self, event):
         while self.counter < 1:
             self.compute_size()
             self.counter = 1
+            self.layout.addWidget(self.time_text, 
+                         alignment=Qt.AlignBottom | Qt.AlignRight)
         return super().resizeEvent(event)
 
     def setPixmap(self, arg__1):
@@ -60,15 +84,20 @@ class SingleImage(QLabel):
         self._pixmap = arg__1
     
     def paintEvent(self, arg__1):
-        # self.compute_size()
         super().paintEvent(arg__1)
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
-        brush = QBrush(self._pixmap.scaled(
-            self.frameSize(),
-            Qt.KeepAspectRatioByExpanding,
-            Qt.SmoothTransformation))
-        rect = self.rect()
-        painter.setBrush(brush)
-        painter.drawRoundedRect(rect, 12, 12)
+
+        if isinstance(self._pixmap, QMovie):
+            pixmap = self._pixmap.currentPixmap()
+        else:
+            pixmap = self._pixmap
+
+            brush = QBrush(pixmap.scaled(
+                self.frameSize(),
+                Qt.KeepAspectRatioByExpanding,
+                Qt.SmoothTransformation))
+            rect = self.rect()
+            painter.setBrush(brush)
+            painter.drawRoundedRect(rect, 12, 12)
