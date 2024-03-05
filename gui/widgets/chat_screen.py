@@ -9,11 +9,11 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpacerItem, 
     QSizePolicy, 
-    QScrollArea, 
     QFileDialog,
+    QApplication,
     )
 from PySide6.QtGui import Qt, QIcon
-from PySide6.QtCore import Slot, Signal, QObject, QThread
+from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
@@ -25,7 +25,7 @@ from .utils.encryption import (
     )
 from .utils.tools import generate_name
 from .custom import TextArea
-from .components import TextBubble, SingleImage
+from .components import TextBubble, SingleImage, ScrollArea
 
 class Worker(QObject):
     finished = Signal()
@@ -77,9 +77,10 @@ class ChatWidget(QWidget):
         self.s = s
         self.server_pubkey = server_pubkey
 
-        self.scroll_area = QScrollArea()
+        self.scroll_area = ScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.horizontalScrollBar().setEnabled(False)
 
         self.chat_area = QWidget()
         self.scroll_area.setWidget(self.chat_area)
@@ -99,7 +100,10 @@ class ChatWidget(QWidget):
         self.send_field.setObjectName("tarea")
         self.setStyleSheet(
             """
-            QPushButton{border: none;}
+            QPushButton{
+                border: none;
+                outline: none;
+                }
             #tarea{
                 border: none;
             }
@@ -154,6 +158,8 @@ class ChatWidget(QWidget):
             data_to_send = encrypt_aes((to_send + f"|{self.name}").encode('utf-8'))
             self._send_chunks(pack_data(data_to_send, self.server_pubkey))
         self.send_field.clear()
+        QApplication.processEvents()
+        QTimer.singleShot(1, self.scroll_down)
 
     def attach_files(self):
         files, filter = QFileDialog().getOpenFileNames(
@@ -168,12 +174,22 @@ class ChatWidget(QWidget):
                 _, ext = os.path.splitext(f)
                 data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
                 self._send_chunks(pack_data(data, self.server_pubkey))
+        QApplication.processEvents()
+        QTimer.singleShot(1, self.scroll_down)
 
     def _send_chunks(self, data, chunk_size=65536):
         for i in range(0, len(data), chunk_size):
             chunk = data[i:i+chunk_size]
             self.s.send(chunk)
         self.s.send(b'-!-END-!-')
+
+    def scroll_down(self):
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+        self.scroll_area.old_max = scrollbar.maximum()
+        self.scroll_area.relative_position = (
+            scrollbar.value() / self.scroll_area.old_max
+            if self.scroll_area.old_max > 0 else 0)
 
 
     def resizeEvent(self, event):
