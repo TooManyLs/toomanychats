@@ -1,4 +1,6 @@
+from base64 import b64decode, b64encode
 from datetime import datetime
+import os
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -10,41 +12,63 @@ from PySide6.QtWidgets import (
     QScrollArea, 
     QFileDialog,
     )
-from PySide6.QtGui import Qt, QIcon, QPixmap
+from PySide6.QtGui import Qt, QIcon
 from PySide6.QtCore import Slot, Signal, QObject, QThread
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
 from .utils.encryption import (
     encrypt_aes, 
-    send_encrypted,
     decrypt_aes,
-    recv_encrypted,
+    pack_data,
+    unpack_data
     )
+from .utils.tools import generate_name
 from .custom import TextArea
 from .components import TextBubble, SingleImage
 
 class Worker(QObject):
     finished = Signal()
-    message_received = Signal(str)
+    message_received = Signal(bytes, bytes)
 
-    def __init__(self, s, my_cipher):
+    def __init__(self, s, my_cipher, pvt):
         super().__init__()
         self.s = s
         self.my_cipher = my_cipher
+        self.pub = pvt.public_key()
 
     @Slot()
     def run(self):
         while True:
             try:
-                data = self.s.recv(10000).decode('utf-8')
-                data, aes, pub = recv_encrypted(data)
+                data = self._receive_chunks()
+                data, aes, pub = unpack_data(data)
+                header = b''
+                if data[:6] == b'IMAGE:':
+                    header, data = data.split(b'<img>')
+                    header = header[6:]
                 aes = self.my_cipher.decrypt(aes)
-                msg = decrypt_aes(data, aes).decode('utf-8')
-                self.message_received.emit(msg)
+                msg = decrypt_aes(data, aes)
+                self.message_received.emit(msg, header)
             except Exception:
                 break
         self.finished.emit()
+    
+    def _receive_chunks(self, chunk_size=65536):
+        chunks = []
+        while True:
+            chunk = self.s.recv(chunk_size)
+            if chunk:
+                if b'-!-END-!-' in chunk:
+                    s_pos = chunk.find(b'-!-END-!-')
+                    e_pos = s_pos + 9
+                    chunks.append(chunk[:s_pos] + chunk[e_pos:])
+                    break
+                chunks.append(chunk)
+            else:
+                return None
+        return b''.join(chunks)
+
 
 class ChatWidget(QWidget):
     def __init__(self, stacked_layout, s, server_pubkey):
@@ -56,11 +80,6 @@ class ChatWidget(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        # self.scroll_area.verticalScrollBar().rangeChanged.connect(
-        #     lambda: self.scroll_area.verticalScrollBar().setValue(
-        #         self.scroll_area.verticalScrollBar().maximum()
-        #     )
-        # )
 
         self.chat_area = QWidget()
         self.scroll_area.setWidget(self.chat_area)
@@ -105,7 +124,7 @@ class ChatWidget(QWidget):
         with open(f"keys/{name}_private.pem", "rb") as f:
             my_pvtkey = RSA.import_key(f.read())
         self.my_cipher = PKCS1_OAEP.new(my_pvtkey)
-        self.worker = Worker(self.s, self.my_cipher)
+        self.worker = Worker(self.s, self.my_cipher, my_pvtkey)
         self.thread = QThread()
         self.worker.moveToThread(self.thread)
         self.worker.finished.connect(self.thread.quit)
@@ -113,12 +132,16 @@ class ChatWidget(QWidget):
         self.thread.started.connect(self.worker.run)
         self.thread.start()
 
-    @Slot(str)
-    def on_message_received(self, msg):
-        if msg[:8] == "[Server]":
-            bubble = TextBubble(msg)
-            self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
+    @Slot(bytes, bytes)
+    def on_message_received(self, msg, ext):
+        if ext:
+            name = generate_name() + ext.decode('utf-8')
+            with open(f"./cache/img/{name}", "wb") as image:
+                image.write(msg)
+            img = SingleImage(f"./cache/img/{name}")
+            self.layout.addWidget(img, alignment=Qt.AlignLeft)
         else:
+            msg = msg.decode('utf-8')
             msg, nametag = msg.rsplit("|", 1)
             bubble = TextBubble(msg, nametag)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
@@ -128,19 +151,30 @@ class ChatWidget(QWidget):
         if to_send:
             bubble = TextBubble(to_send)
             self.layout.addWidget(bubble, alignment=Qt.AlignRight)
-            to_send = encrypt_aes((to_send + f"|{self.name}").encode('utf-8'))
-            self.s.send(send_encrypted(to_send, self.server_pubkey)
-                        .encode('utf-8'))
+            data_to_send = encrypt_aes((to_send + f"|{self.name}").encode('utf-8'))
+            self._send_chunks(pack_data(data_to_send, self.server_pubkey))
         self.send_field.clear()
 
     def attach_files(self):
         files, filter = QFileDialog().getOpenFileNames(
             self, "Choose files",
-            filter="Image files (*.jpg *.png *.bmp *.webp)")
+            filter="Image files (*.jpg *.png *.bmp *.webp *.gif)")
         for f in files:
-            img = SingleImage()
-            img.setPixmap(QPixmap(f))
+            img = SingleImage(f)
             self.layout.addWidget(img, alignment=Qt.AlignRight)
+            with open(f, "rb") as image:
+                data = image.read()
+                data, key = encrypt_aes(data)
+                _, ext = os.path.splitext(f)
+                data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
+                self._send_chunks(pack_data(data, self.server_pubkey))
+
+    def _send_chunks(self, data, chunk_size=65536):
+        for i in range(0, len(data), chunk_size):
+            chunk = data[i:i+chunk_size]
+            self.s.send(chunk)
+        self.s.send(b'-!-END-!-')
+
 
     def resizeEvent(self, event):
         for c in self.chat_area.children():
