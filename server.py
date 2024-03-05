@@ -11,7 +11,9 @@ from encryption import (
     decrypt_aes, 
     generate_sha256, 
     send_encrypted, 
-    recv_encrypted
+    recv_encrypted,
+    pack_data,
+    unpack_data,
     )
 
 SERVER_HOST = "0.0.0.0"
@@ -27,37 +29,53 @@ f_codes = {
 client_sockets = set()
 authenticated_users = {}
 
+async def send_chunks(writer, data: bytes, chunk_size=65536):
+    for i in range(0, len(data), chunk_size):
+        chunk = data[i:i+chunk_size]
+        writer.write(chunk)
+        await writer.drain()
+    writer.write(b'-!-END-!-')
+    await writer.drain()
+
+async def receive_chunks(reader, chunk_size=65536):
+    chunks = []
+    while True:
+        chunk = await reader.read(chunk_size)
+        if chunk:
+            if b'-!-END-!-' in chunk:
+                s_pos = chunk.find(b'-!-END-!-')
+                e_pos = s_pos + 9
+                chunks.append(chunk[:s_pos] + chunk[e_pos:])
+                break
+            chunks.append(chunk)
+        else:
+            return None
+    return b''.join(chunks)
+
 async def listen_for_client(reader, writer, username):
     conn = db.connect(db_pass)
     while True:
         try:
-            data = await reader.read(10000)
-            msg = data.decode('utf-8')
-            if not msg:
+            data = await receive_chunks(reader)
+            if not data:
                 raise ConnectionResetError
             try:
-                msg, aes, pub = recv_encrypted(msg)
+                msg, aes, pub = unpack_data(data)
                 if pub == SERVER_RSA.public_key():
                     dec_key = s_cipher.decrypt(aes)
-                    for client in client_sockets:
-                        if client != writer:
-                            name = ""
-                            for user, sock in authenticated_users.items():
-                                if sock == client:
-                                    name = user
-                                    break
-                            user = db.get_user(conn, name, "public_key")
-                            pubkey = user["public_key"].encode('utf-8')
-                            client.write(send_encrypted(
-                                (msg, dec_key), pubkey
-                                ).encode('utf-8'))
+                    for u, cli in authenticated_users.items():
+                        if u == username or cli == writer:
+                            continue
+                        user = db.get_user(conn, u, "public_key")
+                        pubkey = user["public_key"].encode('utf-8')
+                        await send_chunks(cli, pack_data((msg, dec_key), pubkey))
                 else:
                     user = db.get_by_pubkey(conn, 
                                             pub.export_key().decode('utf-8'))
                     cli = authenticated_users[user]
                     cli.write(send_encrypted(msg, aes), pub).encode('utf-8')
                     continue
-            except Exception as e:
+            except Exception:
                 await handle_command(msg, reader, writer, username)
                 continue
         except (OSError, ConnectionResetError):

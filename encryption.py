@@ -52,3 +52,19 @@ def recv_encrypted(msg):
         b64decode(aes.encode('utf-8')), 
         RSA.import_key(pub.encode('utf-8'))
     )
+
+def pack_data(msg: tuple, pubkey) -> bytes:
+    try:
+        pubkey = RSA.import_key(pubkey)
+    except:
+        pass
+    cipher = PKCS1_OAEP.new(pubkey)
+    text, key = msg
+    pubkey_bytes = pubkey.export_key()
+    data: bytes = text + b'<SEP>' + cipher.encrypt(key) + b'<SEP>' + pubkey_bytes
+    return data
+
+def unpack_data(msg: bytes):
+    text, aes, pub = msg.split(b'<SEP>')
+    data: tuple = text, aes, RSA.import_key(pub)
+    return data
