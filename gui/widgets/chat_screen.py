@@ -23,7 +23,7 @@ from .utils.encryption import (
     pack_data,
     unpack_data
     )
-from .utils.tools import generate_name
+from .utils.tools import generate_name, compress_image
 from .custom import TextArea
 from .components import TextBubble, SingleImage, ScrollArea
 
@@ -166,13 +166,14 @@ class ChatWidget(QWidget):
             self, "Choose files",
             filter="Image files (*.jpg *.png *.bmp *.webp *.gif)")
         for f in files:
-            with open(f, "rb") as image:
+            compressed = compress_image(f)
+            with open(compressed, "rb") as image:
                 data = image.read()
                 data, key = encrypt_aes(data)
-                _, ext = os.path.splitext(f)
+                _, ext = os.path.splitext(compressed)
                 data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
                 self._send_chunks(pack_data(data, self.server_pubkey))
-            img = SingleImage(f)
+            img = SingleImage(compressed)
             self.layout.addWidget(img, alignment=Qt.AlignRight)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)

@@ -1,29 +1,21 @@
-import os
-import subprocess
-import platform
-
-from PySide6.QtWidgets import (
-    QVBoxLayout,  
-    QSizePolicy,
-    QLabel,
-    )
+from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt, QRectF, QRect
 from PySide6.QtGui import (
     QCursor, 
     QPainter, 
-    QBrush, 
     QPixmap, 
     QImageReader, 
-    QMovie, 
     QPainterPath,
     QTransform, 
     )
 
+from utils.tools import compress_image
+
 class ImagePreview(QLabel):
     def __init__(self, path, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.path = path
-        image_reader = QImageReader(path)
+        self.path = compress_image(path, 75, gif_compression=True)
+        image_reader = QImageReader(self.path)
         image_reader.setAutoTransform(True)
         image = image_reader.read()
         pixmap = QPixmap.fromImage(image)
@@ -35,9 +27,6 @@ class ImagePreview(QLabel):
         self.setFixedSize(75, 75)
 
         self.counter = 0
-
-    def compute_size(self):
-        pass
 
     def setPixmap(self, arg__1):
         if not arg__1:
