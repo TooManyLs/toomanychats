@@ -74,7 +74,7 @@ class SingleImage(QLabel):
         parent_width = self.parent().parent().parent().size().width()
         pw = max(pixmap.width(), 100)
         aspect_ratio = pixmap.height() / pixmap.width()
-        new_width = min(parent_width * 0.85, 500, pw)
+        new_width = min(parent_width * 0.8, 500, pw)
         new_height = new_width * aspect_ratio
 
         if new_height > 600:

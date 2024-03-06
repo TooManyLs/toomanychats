@@ -149,8 +149,6 @@ class ChatWidget(QWidget):
             msg, nametag = msg.rsplit("|", 1)
             bubble = TextBubble(msg, nametag)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
-        QApplication.processEvents()
-        QTimer.singleShot(1, self.scroll_down)
 
     def on_send(self):
         to_send: str = self.send_field.toPlainText().strip()

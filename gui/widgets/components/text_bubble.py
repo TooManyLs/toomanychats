@@ -101,7 +101,7 @@ class TextBubble(QTextEdit):
         super().paintEvent(event)
 
         painter = QPainter(self.viewport())
-        painter.setPen(QColor('lightgray'))
+        painter.setPen(QColor('gray'))
         rect = self.rect()
         rect.setRight(rect.right() - 12)
         if self.name:
