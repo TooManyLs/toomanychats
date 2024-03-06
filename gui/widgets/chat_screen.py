@@ -149,6 +149,8 @@ class ChatWidget(QWidget):
             msg, nametag = msg.rsplit("|", 1)
             bubble = TextBubble(msg, nametag)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
+        QApplication.processEvents()
+        QTimer.singleShot(1, self.scroll_down)
 
     def on_send(self):
         to_send: str = self.send_field.toPlainText().strip()
@@ -166,14 +168,14 @@ class ChatWidget(QWidget):
             self, "Choose files",
             filter="Image files (*.jpg *.png *.bmp *.webp *.gif)")
         for f in files:
-            img = SingleImage(f)
-            self.layout.addWidget(img, alignment=Qt.AlignRight)
             with open(f, "rb") as image:
                 data = image.read()
                 data, key = encrypt_aes(data)
                 _, ext = os.path.splitext(f)
                 data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
                 self._send_chunks(pack_data(data, self.server_pubkey))
+            img = SingleImage(f)
+            self.layout.addWidget(img, alignment=Qt.AlignRight)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
 
