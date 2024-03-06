@@ -1,0 +1,65 @@
+import os
+import subprocess
+import platform
+
+from PySide6.QtWidgets import (
+    QVBoxLayout,  
+    QSizePolicy,
+    QLabel,
+    )
+from PySide6.QtCore import Qt, QRectF, QRect
+from PySide6.QtGui import (
+    QCursor, 
+    QPainter, 
+    QBrush, 
+    QPixmap, 
+    QImageReader, 
+    QMovie, 
+    QPainterPath,
+    QTransform, 
+    )
+
+class ImagePreview(QLabel):
+    def __init__(self, path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.path = path
+        image_reader = QImageReader(path)
+        image_reader.setAutoTransform(True)
+        image = image_reader.read()
+        pixmap = QPixmap.fromImage(image)
+        self.setPixmap(pixmap)
+        self._pixmap = pixmap
+        self._resized = False
+        self.setScaledContents(False)
+        self.setCursor(QCursor(Qt.PointingHandCursor))
+        self.setFixedSize(75, 75)
+
+        self.counter = 0
+
+    def compute_size(self):
+        pass
+
+    def setPixmap(self, arg__1):
+        if not arg__1:
+            return
+        self._pixmap = arg__1
+    
+    def paintEvent(self, arg__1):
+        super().paintEvent(arg__1)
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), 9.5, 9.5)
+        painter.setClipPath(path)
+
+        crop_size = min(self._pixmap.width(), self._pixmap.height())
+
+        image = self._pixmap.toImage()
+        transform = QTransform()
+        transform = transform.scale(75 / crop_size, 75 / crop_size)
+        image = image.transformed(transform, Qt.SmoothTransformation)
+        pixmap = QPixmap.fromImage(image)
+
+        painter.drawPixmap(self.rect(), pixmap, QRect(0, 0, 75, 75))
+        painter.end()
