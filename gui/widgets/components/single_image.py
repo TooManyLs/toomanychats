@@ -8,8 +8,16 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QLabel,
     )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QCursor, QPainter, QBrush, QPixmap, QImageReader, QMovie
+from PySide6.QtCore import Qt, QRectF
+from PySide6.QtGui import (
+    QCursor, 
+    QPainter, 
+    QBrush, 
+    QPixmap, 
+    QImageReader, 
+    QMovie, 
+    QPainterPath,
+    )
 
 class SingleImage(QLabel):
     def __init__(self, path, *args, **kwargs):
@@ -64,11 +72,16 @@ class SingleImage(QLabel):
         else:
             pixmap = self._pixmap
         parent_width = self.parent().parent().parent().size().width()
+        pw = max(pixmap.width(), 100)
         aspect_ratio = pixmap.height() / pixmap.width()
-        self.setFixedWidth(min(parent_width * 0.85, 
-                               500, 
-                               pixmap.width()))
-        self.setFixedHeight(self.width() * aspect_ratio)
+        new_width = min(parent_width * 0.85, 500, pw)
+        new_height = new_width * aspect_ratio
+
+        if new_height > 600:
+            new_height = 600
+            new_width = new_height / aspect_ratio
+
+        self.setFixedSize(new_width, new_height)
 
     def resizeEvent(self, event):
         while self.counter < 1:
@@ -94,10 +107,18 @@ class SingleImage(QLabel):
         else:
             pixmap = self._pixmap
 
+            pixmap = pixmap.scaled(
+                self.frameSize(),
+                Qt.KeepAspectRatioByExpanding,
+                Qt.SmoothTransformation
+            )
+            path = QPainterPath()
             brush = QBrush(pixmap.scaled(
                 self.frameSize(),
                 Qt.KeepAspectRatioByExpanding,
                 Qt.SmoothTransformation))
-            rect = self.rect()
             painter.setBrush(brush)
-            painter.drawRoundedRect(rect, 12, 12)
+            path.addRoundedRect(QRectF(self.rect()), 12, 12)
+            painter.setClipPath(path)
+            painter.drawPixmap(self.rect(), pixmap)
+            painter.end()
