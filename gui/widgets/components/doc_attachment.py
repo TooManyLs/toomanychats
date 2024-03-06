@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout, 
     QLineEdit,
     QLabel,
-    QTextEdit, 
     QPushButton, 
     QSizePolicy,
     QFrame,
@@ -17,11 +16,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QFontMetrics, 
     QPainter, 
-    QColor,
     QResizeEvent, 
-    QTextDocument, 
     QCursor,
-    QFont
     )
 from PySide6.QtCore import Qt, QEvent
 from .image_preview import ImagePreview
@@ -101,7 +97,7 @@ class DocAttachment(QFrame):
         info_layout = QVBoxLayout()
         info_layout.setSpacing(5)
         info_layout.setAlignment(Qt.AlignTop)
-        info_layout.setContentsMargins(10,0,10,0)
+        info_layout.setContentsMargins(10,0,5,0)
         self.name_text = EllipsisLabel(filename)
         size_text = QLabel(filesize)
         time_text = QLabel(self.time)
@@ -115,16 +111,13 @@ class DocAttachment(QFrame):
         info_layout.addWidget(time_text, 
                               alignment= Qt.AlignBottom | Qt.AlignRight)
 
-
-
-
-
         main_layout.addWidget(self.preview)
         main_layout.addLayout(info_layout)
 
         layout.addLayout(main_layout)
         
         self.setFixedHeight(85)
+        self.setMinimumWidth(250)
         self.setStyleSheet(
             """
             QFrame{
