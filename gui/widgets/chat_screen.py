@@ -25,7 +25,7 @@ from .utils.encryption import (
     )
 from .utils.tools import generate_name, compress_image
 from .custom import TextArea
-from .components import TextBubble, SingleImage, ScrollArea
+from .components import TextBubble, SingleImage, ScrollArea, DocAttachment
 
 class Worker(QObject):
     finished = Signal()
@@ -45,8 +45,13 @@ class Worker(QObject):
                 data, aes, pub = unpack_data(data)
                 header = b''
                 if data[:6] == b'IMAGE:':
+                    print("recieving img")
                     header, data = data.split(b'<img>')
                     header = header[6:]
+                elif data[:9] == b'DOCUMENT:':
+                    print("recieving doc")
+                    header, data = data.split(b'<doc>')
+                    header = header[9:]
                 aes = self.my_cipher.decrypt(aes)
                 msg = decrypt_aes(data, aes)
                 self.message_received.emit(msg, header)
@@ -138,12 +143,19 @@ class ChatWidget(QWidget):
 
     @Slot(bytes, bytes)
     def on_message_received(self, msg, ext):
-        if ext:
-            name = generate_name() + ext.decode('utf-8')
+        picture_type = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif")
+        ext = ext.decode('utf-8')
+        if ext and ext in picture_type:
+            name = generate_name() + ext
             with open(f"./cache/img/{name}", "wb") as image:
                 image.write(msg)
             img = SingleImage(f"./cache/img/{name}")
             self.layout.addWidget(img, alignment=Qt.AlignLeft)
+        elif ext and ext not in picture_type:
+            with open(f"./cache/attachments/{ext}", "wb") as doc:
+                doc.write(msg)
+            doc = DocAttachment(f"./cache/attachments/{ext}")
+            self.layout.addWidget(doc, alignment=Qt.AlignLeft)
         else:
             msg = msg.decode('utf-8')
             msg, nametag = msg.rsplit("|", 1)
@@ -164,17 +176,27 @@ class ChatWidget(QWidget):
     def attach_files(self):
         files, filter = QFileDialog().getOpenFileNames(
             self, "Choose files",
-            filter="Image files (*.jpg *.png *.bmp *.webp *.gif)")
+            filter="Image files (*.jpg *.png *.bmp *.webp *.gif);;All files (*.*)")
         for f in files:
-            compressed = compress_image(f)
-            with open(compressed, "rb") as image:
-                data = image.read()
-                data, key = encrypt_aes(data)
-                _, ext = os.path.splitext(compressed)
-                data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
-                self._send_chunks(pack_data(data, self.server_pubkey))
-            img = SingleImage(compressed)
-            self.layout.addWidget(img, alignment=Qt.AlignRight)
+            if filter == "Image files (*.jpg *.png *.bmp *.webp *.gif)":
+                compressed = compress_image(f)
+                with open(compressed, "rb") as image:
+                    data = image.read()
+                    data, key = encrypt_aes(data)
+                    _, ext = os.path.splitext(compressed)
+                    data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
+                    self._send_chunks(pack_data(data, self.server_pubkey))
+                img = SingleImage(compressed)
+                self.layout.addWidget(img, alignment=Qt.AlignRight)
+            else:
+                with open(f, "rb") as doc:
+                    data = doc.read()
+                    data, key = encrypt_aes(data)
+                    filename = os.path.basename(f)
+                    data = (b"DOCUMENT:" + filename.encode('utf-8') + b'<doc>' + data, key)
+                    self._send_chunks(pack_data(data, self.server_pubkey))
+                doc = DocAttachment(f)
+                self.layout.addWidget(doc, alignment=Qt.AlignRight)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
 

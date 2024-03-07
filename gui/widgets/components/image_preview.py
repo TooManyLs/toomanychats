@@ -9,12 +9,15 @@ from PySide6.QtGui import (
     QTransform, 
     )
 
-from utils.tools import compress_image
+from ..utils.tools import compress_image
 
 class ImagePreview(QLabel):
     def __init__(self, path, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.path = compress_image(path, 75, gif_compression=True)
+        if path == "./public/document.png":
+            self.path = path
+        else:
+            self.path = compress_image(path, 128, gif_compression=True)
         image_reader = QImageReader(self.path)
         image_reader.setAutoTransform(True)
         image = image_reader.read()
@@ -50,5 +53,8 @@ class ImagePreview(QLabel):
         image = image.transformed(transform, Qt.SmoothTransformation)
         pixmap = QPixmap.fromImage(image)
 
-        painter.drawPixmap(self.rect(), pixmap, QRect(0, 0, 75, 75))
+        center_x = (pixmap.width() - 75) // 2
+        center_y = (pixmap.height() - 75) // 2
+
+        painter.drawPixmap(self.rect(), pixmap, QRect(center_x, center_y, 75, 75))
         painter.end()
