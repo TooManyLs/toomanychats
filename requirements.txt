@@ -1,0 +1,8 @@
+coloram
+pillow
+psycopg
+pycryptodome
+PySide
+PySide6_Addon
+PySide6_Essential
+shiboken

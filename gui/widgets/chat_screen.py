@@ -45,11 +45,9 @@ class Worker(QObject):
                 data, aes, pub = unpack_data(data)
                 header = b''
                 if data[:6] == b'IMAGE:':
-                    print("recieving img")
                     header, data = data.split(b'<img>')
                     header = header[6:]
                 elif data[:9] == b'DOCUMENT:':
-                    print("recieving doc")
                     header, data = data.split(b'<doc>')
                     header = header[9:]
                 aes = self.my_cipher.decrypt(aes)
