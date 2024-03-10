@@ -16,9 +16,9 @@ class Overlay(QWidget):
         self.setPalette(QColor(0, 0, 0, 120))
         self.setAutoFillBackground(True)
 
-class PopupDialog(QDialog):
+class AttachDialog(QDialog):
     def __init__(self, parent=None, files=None):
-        super(PopupDialog, self).__init__(parent)
+        super(AttachDialog, self).__init__(parent)
         self.data = files
         print(self.data)
         self.setWindowFlag(Qt.FramelessWindowHint, True)
@@ -57,5 +57,9 @@ class PopupDialog(QDialog):
         self.send.clicked.connect(self.accept)
 
     def showEvent(self, event):
-        parent_geometry = self.parent().geometry()
+        try:
+            parent_geometry = self.parent().parent().parent().geometry()
+        except AttributeError:
+            parent_geometry = self.parent().geometry()
+
         self.move(parent_geometry.center() - self.rect().center())

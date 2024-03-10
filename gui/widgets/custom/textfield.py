@@ -5,12 +5,18 @@ from PySide6.QtWidgets import (
     QPushButton, 
     QHBoxLayout,
     )
-from PySide6.QtGui import QPainter, QIcon
+from PySide6.QtGui import QPainter, QIcon, QPalette, QColor
 from PySide6.QtCore import Qt, QSize
 
 class TextField(QLineEdit):
     def __init__(self, label: str=None, drop_shadow=False, show_hide=None, parent=None):
         super(TextField, self).__init__(parent)
+
+        palette = QPalette()
+        palette.setColor(QPalette.Base, QColor("#2e2e2e"))
+        palette.setColor(QPalette.Text, QColor("white"))
+        self.setPalette(palette)
+
         self.label = QLabel(label)
         self.label.hide()
         self.label.setStyleSheet(

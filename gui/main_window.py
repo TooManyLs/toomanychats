@@ -1,6 +1,7 @@
 import sys
 import atexit
 import socket
+from PySide6.QtGui import QPalette, QColor
 
 from PySide6.QtWidgets import (
     QApplication, 
@@ -14,6 +15,7 @@ from widgets import EnterWidget
 from widgets import SignIn
 from widgets import SignUp
 from widgets import ChatWidget
+from widgets.components import Overlay
 
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 5002
@@ -28,6 +30,8 @@ class MainWindow(QMainWindow):
         print("[+] Connected.")
 
         self.setWindowTitle("TooManyChats")
+        self.overlay = Overlay(self)
+        self.overlay.hide()
 
         self.stacked_layout = QStackedLayout()
 
@@ -47,25 +51,50 @@ class MainWindow(QMainWindow):
 
         container = QWidget()
         container.setLayout(self.stacked_layout)
-
         self.setCentralWidget(container)
-
         self.setMinimumWidth(400)
+        self.setMinimumHeight(600)
+
+        self.overlay.setParent(self)
+        self.overlay.resize(self.size())
+
         atexit.register(self.quit)
 
     def quit(self):
         self.s.close()
 
+    def showEvent(self, event):
+        self.overlay.resize(self.size())
+        event.accept()
+
+    def moveEvent(self, event):
+        if hasattr(self.main_widget, 'dialog'):
+            parent_geometry = self.geometry()
+            self.main_widget.dialog.move(
+                parent_geometry.center() - self.main_widget.dialog.rect().center())
+
+    def resizeEvent(self, event):
+        # Keeps dialog in the center of the window
+        if hasattr(self.main_widget, 'dialog'):
+            parent_geometry = self.geometry()
+            self.main_widget.dialog.move(
+                parent_geometry.center() - self.main_widget.dialog.rect().center())
+            self.overlay.resize(event.size())
+            event.accept()
+
 app = QApplication(sys.argv)
-app.setStyle("Fusion")
 
 window = MainWindow()
 window.setStyleSheet(
     """
-    background-color: #1e1e1e;
-    color: white;
+    QPushButton{color: white;}
     """
     )
+palette = QPalette()
+palette.setColor(QPalette.Window, QColor("#1e1e1e"))
+palette.setColor(QPalette.WindowText, QColor("white"))
+
+app.setPalette(palette)
 window.resize(1000, 800)
 window.show()
 

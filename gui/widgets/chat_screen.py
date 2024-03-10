@@ -11,8 +11,9 @@ from PySide6.QtWidgets import (
     QSizePolicy, 
     QFileDialog,
     QApplication,
+    QDialog,
     )
-from PySide6.QtGui import Qt, QIcon
+from PySide6.QtGui import Qt, QIcon, QCursor
 from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
@@ -25,7 +26,13 @@ from .utils.encryption import (
     )
 from .utils.tools import generate_name, compress_image
 from .custom import TextArea
-from .components import TextBubble, SingleImage, ScrollArea, DocAttachment
+from .components import (
+    TextBubble, 
+    SingleImage, 
+    ScrollArea, 
+    DocAttachment,
+    AttachDialog,
+    )
 
 class Worker(QObject):
     finished = Signal()
@@ -86,6 +93,7 @@ class ChatWidget(QWidget):
         self.scroll_area.horizontalScrollBar().setEnabled(False)
 
         self.chat_area = QWidget()
+        self.chat_area.setObjectName("scrollarea")
         self.scroll_area.setWidget(self.chat_area)
 
         self.layout = QVBoxLayout(self.chat_area)
@@ -94,6 +102,7 @@ class ChatWidget(QWidget):
             QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0,0,0,0)
 
         attach_icon = QIcon("./public/attach.png")
         self.attach = QPushButton(icon=attach_icon)
@@ -101,19 +110,31 @@ class ChatWidget(QWidget):
         self.send_field = TextArea()
         self.send_field.setPlaceholderText("Write a message...")
         self.send_field.setObjectName("tarea")
+        self.attach.setCursor(QCursor(Qt.PointingHandCursor))
+        self.button.setCursor(QCursor(Qt.PointingHandCursor))
         self.setStyleSheet(
             """
             QPushButton{
                 border: none;
+                border-radius: 6px;
+                padding: 7px;
                 outline: none;
                 }
+            QPushButton:hover{
+                background-color: #2e2e2e;
+            }
             #tarea{
                 border: none;
             }
+            #scrollarea{
+                background-color: #1e1e1e;
+            }     
             """
             )
+        
 
         input_layout = QHBoxLayout()
+        input_layout.setContentsMargins(8,0,8,7)
         input_layout.addWidget(self.attach)
         input_layout.addWidget(self.send_field)
         input_layout.addWidget(self.button)
@@ -124,7 +145,7 @@ class ChatWidget(QWidget):
         self.setLayout(main_layout)
 
         self.button.clicked.connect(self.on_send)
-        self.attach.clicked.connect(self.attach_files)
+        self.attach.clicked.connect(self.attach_file)
 
     def listen_for_messages(self, name):
         self.name = name
@@ -170,13 +191,25 @@ class ChatWidget(QWidget):
         self.send_field.clear()
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
-
-    def attach_files(self):
+    
+    def attach_file(self):
         files, filter = QFileDialog().getOpenFileNames(
-            self, "Choose files",
-            filter="Image files (*.jpg *.png *.bmp *.webp *.gif);;All files (*.*)")
+            self, "Choose images", 
+            filter="Image files (*.jpg *.jpeg *.png *.bmp *.webp *.gif);;All files (*.*)")
+        if files:
+            self.dialog = AttachDialog(self, files=files)
+            self.window().overlay.show()
+            self.dialog.show()
+            self.dialog.finished.connect(lambda: self.on_dialog_finished(self.dialog.result(), files, filter))
+
+    def on_dialog_finished(self, result, files, filter):
+        self.window().overlay.hide()
+        if result == QDialog.Accepted:
+            self.display_attach(files, filter)
+
+    def display_attach(self, files, filter):
         for f in files:
-            if filter == "Image files (*.jpg *.png *.bmp *.webp *.gif)":
+            if filter == "Image files (*.jpg *.jpeg *.png *.bmp *.webp *.gif)":
                 compressed = compress_image(f)
                 with open(compressed, "rb") as image:
                     data = image.read()
@@ -212,10 +245,15 @@ class ChatWidget(QWidget):
             scrollbar.value() / self.scroll_area.old_max
             if self.scroll_area.old_max > 0 else 0)
 
-
     def resizeEvent(self, event):
         for c in self.chat_area.children():
             if c.isWidgetType():
-                c.compute_size()
+                try:
+                    c.compute_size()
+                except AttributeError:
+                    c.name_text.compute_size()
+
+    def showEvent(self, event) -> None:
+        self.window().overlay.raise_()
     
     
