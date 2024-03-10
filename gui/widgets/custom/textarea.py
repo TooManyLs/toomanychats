@@ -9,6 +9,7 @@ class TextArea(QTextEdit):
         self.one_line_height = self.fontMetrics().lineSpacing()
         self.setMaximumHeight(self.one_line_height * 12 + 12)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setStyleSheet("background-color: #1e1e1e; color: white;")
 
     def compute_height(self):
         doc = QTextDocument(self.toPlainText())
@@ -29,3 +30,12 @@ class TextArea(QTextEdit):
         text = source.text()
         fragment = QTextDocumentFragment.fromPlainText(text)
         self.textCursor().insertFragment(fragment)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() == Qt.Key_Return and not event.modifiers() & Qt.ShiftModifier:
+            try:
+                self.parent().on_send()
+            except AttributeError:
+                self.parent().parent().on_send()
+        else:
+            super().keyPressEvent(event)
