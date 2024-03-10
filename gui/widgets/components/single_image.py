@@ -58,12 +58,13 @@ class SingleImage(QLabel):
     def mouseReleaseEvent(self, ev):
         absolute_path = os.path.abspath(self.path)
         
-        if platform.system() == 'Windows':
-            os.startfile(absolute_path)
-        elif platform.system() == 'Darwin':  # macOS
-            subprocess.call(('open', absolute_path))
-        else:  # linux variants
-            subprocess.call(('xdg-open', absolute_path))
+        if ev.button() == Qt.LeftButton:
+            if platform.system() == 'Windows':
+                os.startfile(absolute_path)
+            elif platform.system() == 'Darwin':  # macOS
+                subprocess.call(('open', absolute_path))
+            else:  # linux variants
+                subprocess.call(('xdg-open', absolute_path))
         return super().mouseReleaseEvent(ev)
 
     def compute_size(self):
