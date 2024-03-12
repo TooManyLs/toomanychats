@@ -17,7 +17,8 @@ class ImagePreview(QLabel):
         if path == "./public/document.png":
             self.path = path
         else:
-            self.path = compress_image(path, 128, gif_compression=True)
+            self.path = compress_image(path, 128, gif_compression=True, 
+                                       temp=True)
         image_reader = QImageReader(self.path)
         image_reader.setAutoTransform(True)
         image = image_reader.read()
