@@ -8,7 +8,13 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import (
+    QColor, 
+    QPainter, 
+    QPainterPath, 
+    QBrush, 
+    QPen
+    )
 
 class Overlay(QWidget):
     def __init__(self, parent=None):
@@ -22,6 +28,7 @@ class AttachDialog(QDialog):
         self.data = files
         print(self.data)
         self.setWindowFlag(Qt.FramelessWindowHint, True)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setGeometry(0, 0, 350, 400)
 
         main = QVBoxLayout(self)
@@ -63,3 +70,11 @@ class AttachDialog(QDialog):
             parent_geometry = self.parent().geometry()
 
         self.move(parent_geometry.center() - self.rect().center())
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(self.rect(), 12, 12)
+        painter.fillPath(path, QBrush(QColor("#1e1e1e")))
+        painter.strokePath(path, QPen(Qt.NoPen))
