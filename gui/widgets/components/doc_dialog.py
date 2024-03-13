@@ -6,6 +6,9 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpacerItem,
     QSizePolicy,
+    QLabel, 
+    QCheckBox, 
+
     )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
@@ -13,8 +16,12 @@ from PySide6.QtGui import (
     QPainter, 
     QPainterPath, 
     QBrush, 
-    QPen
+    QPen,
+    QPixmap
     )
+
+from .scroll_area import ScrollArea
+from .doc_attachment import DocAttachment
 
 class Overlay(QWidget):
     def __init__(self, parent=None):
@@ -23,7 +30,7 @@ class Overlay(QWidget):
         self.setAutoFillBackground(True)
 
 class AttachDialog(QDialog):
-    def __init__(self, parent=None, files=None):
+    def __init__(self, parent=None, files: list[str]=None):
         super(AttachDialog, self).__init__(parent)
         self.data = files
         print(self.data)
@@ -32,7 +39,38 @@ class AttachDialog(QDialog):
         self.setGeometry(0, 0, 350, 400)
 
         main = QVBoxLayout(self)
-        main.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        main.setSpacing(10)
+
+        self.scroll_area = ScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_contents = QWidget()
+        self.scroll_area.setWidget(self.scroll_contents)
+        self.scroll_layout = QVBoxLayout(self.scroll_contents)
+        self.scroll_layout.setContentsMargins(0,0,0,10)
+
+
+        self.pics = []
+        for file in self.data:
+            if file.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                label = QLabel(self)
+                pixmap = QPixmap(file)
+                pixmap = pixmap.scaled(
+                    300, 270, Qt.KeepAspectRatio, 
+                    Qt.SmoothTransformation)
+                label.setPixmap(pixmap)
+                self.scroll_layout.addWidget(label, alignment=Qt.AlignCenter)
+                self.pics.append((label, file))
+            else:
+                doc = DocAttachment(file, attachment=True)
+                self.scroll_layout.addWidget(doc, alignment=Qt.AlignCenter)
+
+        main.addWidget(self.scroll_area)
+
+        if self.pics:
+            self.compress_images_checkbox = QCheckBox("Compress images", self)
+            self.compress_images_checkbox.setChecked(True)
+            self.compress_images_checkbox.stateChanged.connect(self.on_compress_images_state_changed)
+            main.addWidget(self.compress_images_checkbox)
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
@@ -62,6 +100,25 @@ class AttachDialog(QDialog):
 
         self.cancel.clicked.connect(self.reject)
         self.send.clicked.connect(self.accept)
+
+    def on_compress_images_state_changed(self, state):
+        for i in range(len(self.pics)):
+            widget, file = self.pics[i]
+            if isinstance(widget, QLabel) and state == 0:
+                doc = DocAttachment(file, attachment=True)
+                self.scroll_layout.replaceWidget(widget, doc)
+                widget.deleteLater()
+                self.pics[i] = (doc, file)
+            elif isinstance(widget, DocAttachment) and state == 2:
+                label = QLabel(self)
+                pixmap = QPixmap(file)
+                pixmap = pixmap.scaled(
+                    300, 270, Qt.KeepAspectRatio, 
+                    Qt.SmoothTransformation)
+                label.setPixmap(pixmap)
+                self.scroll_layout.replaceWidget(widget, label)
+                widget.deleteLater()
+                self.pics[i] = (label, file)
 
     def showEvent(self, event):
         try:

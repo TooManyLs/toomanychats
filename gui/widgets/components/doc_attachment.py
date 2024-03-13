@@ -63,7 +63,7 @@ class EllipsisLabel(QLabel):
         self.setFixedWidth(min(text_width, 400))
 
 class DocAttachment(QFrame):
-    def __init__(self, path, name=None, *args, **kwargs):
+    def __init__(self, path, name=None, attachment=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = datetime.now().strftime("%I:%M %p")
         _, ext = os.path.splitext(path)
@@ -100,16 +100,17 @@ class DocAttachment(QFrame):
         info_layout.setContentsMargins(10,0,5,0)
         self.name_text = EllipsisLabel(filename)
         size_text = QLabel(filesize)
-        time_text = QLabel(self.time)
         size_text.setObjectName("secondary")
-        time_text.setObjectName("secondary")
 
         info_layout.addWidget(self.name_text, alignment=Qt.AlignTop)
         info_layout.addWidget(size_text, alignment=Qt.AlignTop)
         info_layout.addItem(
             QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
-        info_layout.addWidget(time_text, 
-                              alignment= Qt.AlignBottom | Qt.AlignRight)
+        if not attachment:
+            time_text = QLabel(self.time)
+            time_text.setObjectName("secondary")
+            info_layout.addWidget(time_text, 
+                                alignment= Qt.AlignBottom | Qt.AlignRight)
 
         main_layout.addWidget(self.preview)
         main_layout.addLayout(info_layout)
@@ -126,6 +127,9 @@ class DocAttachment(QFrame):
             #secondary{color: gray;};
             """
             )
+        if attachment:
+            self.setFixedWidth(290)
+            self.setStyleSheet("#secondary{color: gray;}")
         self.setCursor(QCursor(Qt.PointingHandCursor))
 
         if name:
