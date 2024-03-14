@@ -67,10 +67,10 @@ class AttachDialog(QDialog):
         main.addWidget(self.scroll_area)
 
         if self.pics:
-            self.compress_images_checkbox = QCheckBox("Compress images", self)
-            self.compress_images_checkbox.setChecked(True)
-            self.compress_images_checkbox.stateChanged.connect(self.on_compress_images_state_changed)
-            main.addWidget(self.compress_images_checkbox)
+            self.compress_img = QCheckBox("Compress images", self)
+            self.compress_img.setChecked(True)
+            self.compress_img.stateChanged.connect(self.on_compress_images_state_changed)
+            main.addWidget(self.compress_img)
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
@@ -95,6 +95,23 @@ class AttachDialog(QDialog):
             QPushButton:hover{
                 background-color: #2e2e2e
                 }
+            QCheckBox{
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QCheckBox::indicator{
+                border: 1px solid white;
+                border-radius: 6px;
+                height: 20px;
+                width: 20px;
+                margin-right: 5px;
+            }
+            QCheckBox::indicator:checked{
+                border-image: url(./public/checked.png) 0 0 0 0 stretch stretch;
+            }
+            QCheckBox::indicator:unchecked{
+                border-image: url(./public/unchecked.png) 0 0 0 0 stretch stretch;
+            }
             """
             )
 
