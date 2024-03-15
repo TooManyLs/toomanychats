@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
 
         self.overlay.setParent(main_widget)
-        self.overlay.resize(self.size())
+        self.overlay.resize(main_widget.size())
 
         dft = TextBubble("DEFAULT TEXT", "Bryan")
         dft2 = TextBubble("TEST TEXT", "Hannah")
@@ -111,19 +111,19 @@ More geese than swans now live, more fools than wise.""",
             )
         
     def attach_file(self):
-        files, filter = QFileDialog().getOpenFileNames(
-            self, "Choose images", 
-            filter="Image files (*.jpg *.jpeg *.png *.bmp *.webp *.gif);;All files (*.*)")
+        files, _ = QFileDialog().getOpenFileNames(
+            self, "Choose Files", 
+            filter="All files (*.*)")
         if files:
             self.dialog = AttachDialog(self, files=files)
             self.overlay.show()
             self.dialog.show()
-            self.dialog.finished.connect(lambda: self.on_dialog_finished(self.dialog.result(), files, filter))
 
-    def on_dialog_finished(self, result, files, filter):
+    def on_dialog_finished(self, result, files):
+        self.dialog.hide()
         self.overlay.hide()
         if result == QDialog.Accepted:
-            self.display_attach(files, filter)
+            self.display_attach(files)
     
     def moveEvent(self, event):
         if hasattr(self, 'dialog'):
@@ -147,9 +147,9 @@ More geese than swans now live, more fools than wise.""",
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
 
-    def display_attach(self, files, filter):
-        for f in files:
-            if filter == "Image files (*.jpg *.jpeg *.png *.bmp *.webp *.gif)":
+    def display_attach(self, files):
+        for f, compressed in files:
+            if compressed:
                 img = SingleImage(compress_image(f))
                 self.layout.addWidget(img, alignment=Qt.AlignRight)
             else:
@@ -160,10 +160,10 @@ More geese than swans now live, more fools than wise.""",
 
     def resizeEvent(self, event):
         # Keeps dialog in the center of the window
+        self.overlay.resize(event.size())
         if hasattr(self, 'dialog'):
             parent_geometry = self.geometry()
             self.dialog.move(parent_geometry.center() - self.dialog.rect().center())
-            self.overlay.resize(event.size())
             event.accept()
         # Resizes all widgets contained in scroll area
         for c in self.chat_area.children():
@@ -174,7 +174,7 @@ More geese than swans now live, more fools than wise.""",
                     c.name_text.compute_size()
     
     def showEvent(self, event):
-        self.overlay.resize(self.size())
+        self.overlay.resize(self.window().size())
         event.accept()
 
 if __name__ == "__main__":
