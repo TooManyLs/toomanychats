@@ -190,10 +190,11 @@ class ChatWidget(QWidget):
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
     
-    def attach_file(self):
-        files, _ = QFileDialog().getOpenFileNames(
-            self, "Choose Files", 
-            filter="All files (*.*)")
+    def attach_file(self, files=None):
+        if not files:
+            files, _ = QFileDialog().getOpenFileNames(
+                self, "Choose Files", 
+                filter="All files (*.*)")
         if files:
             self.dialog = AttachDialog(self, files=files)
             self.window().overlay.show()

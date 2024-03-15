@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
 
 class TextArea(QTextEdit):
     def __init__(self, *args, **kwargs):
@@ -27,6 +27,16 @@ class TextArea(QTextEdit):
         return super().paintEvent(event)
     
     def insertFromMimeData(self, source):
+        if source.hasUrls():
+            source_urls = source.urls()
+            files = []
+            for url in source_urls:
+                files.append(QUrl.path(url)[1:])
+            try:
+                self.parent().attach_file(files)
+            except AttributeError:
+                self.parent().parent().attach_file(files)
+            return
         text = source.text()
         fragment = QTextDocumentFragment.fromPlainText(text)
         self.textCursor().insertFragment(fragment)
