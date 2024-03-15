@@ -81,6 +81,21 @@ class MainWindow(QMainWindow):
             self.main_widget.dialog.move(
                 parent_geometry.center() - self.main_widget.dialog.rect().center())
             event.accept()
+    
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls() and self.stacked_layout.currentIndex() == 3:
+            event.accept()
+            self.overlay.show()
+        else:
+            event.ignore()
+        
+    def dragLeaveEvent(self, event):
+        self.overlay.hide()
+        return super().dragLeaveEvent(event)
+    
+    def dropEvent(self, event):
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        self.main_widget.attach_file(files)
 
 app = QApplication(sys.argv)
 

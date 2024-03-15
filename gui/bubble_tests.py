@@ -109,6 +109,13 @@ More geese than swans now live, more fools than wise.""",
             }
             """
             )
+        self.scroll_area.setFocusProxy(self.text_input)
+        self.attach.setFocusProxy(self.text_input)
+        self.send_button.setFocusProxy(self.text_input)
+        for o in self.chat_area.children():
+            if isinstance(o, QWidget):
+                o.setFocusProxy(self.text_input)
+
         
     def attach_file(self, files=None):
         if not files:
@@ -143,6 +150,7 @@ More geese than swans now live, more fools than wise.""",
         message = self.text_input.toPlainText().strip()
         if message:
             bubble = TextBubble(message)
+            bubble.setFocusProxy(self.text_input)
             self.layout.addWidget(bubble, alignment=Qt.AlignRight)
         self.text_input.clear()
         QApplication.processEvents()
@@ -152,9 +160,11 @@ More geese than swans now live, more fools than wise.""",
         for f, compressed in files:
             if compressed:
                 img = SingleImage(compress_image(f))
+                img.setFocusProxy(self.text_input)
                 self.layout.addWidget(img, alignment=Qt.AlignRight)
             else:
                 doc = DocAttachment(f)
+                doc.setFocusProxy(self.text_input)
                 self.layout.addWidget(doc, alignment=Qt.AlignRight)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
@@ -177,6 +187,21 @@ More geese than swans now live, more fools than wise.""",
     def showEvent(self, event):
         self.overlay.resize(self.window().size())
         event.accept()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+            self.overlay.show()
+        else:
+            event.ignore()
+        
+    def dragLeaveEvent(self, event):
+        self.overlay.hide()
+        return super().dragLeaveEvent(event)
+    
+    def dropEvent(self, event):
+        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        self.attach_file(files)
 
 if __name__ == "__main__":
     app = QApplication([])
