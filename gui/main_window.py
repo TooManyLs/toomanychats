@@ -1,3 +1,4 @@
+import os
 import sys
 import atexit
 import socket
@@ -84,7 +85,11 @@ class MainWindow(QMainWindow):
     
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls() and self.stacked_layout.currentIndex() == 3:
-            event.accept()
+            for url in event.mimeData().urls():
+                if os.path.isdir(url.toLocalFile()):
+                    event.ignore() 
+                    return
+            event.acceptProposedAction()
             self.overlay.show()
         else:
             event.ignore()

@@ -1,3 +1,5 @@
+import os
+
 from PySide6.QtWidgets import (
     QApplication, 
     QMainWindow, 
@@ -190,7 +192,11 @@ More geese than swans now live, more fools than wise.""",
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
-            event.accept()
+            for url in event.mimeData().urls():
+                if os.path.isdir(url.toLocalFile()):
+                    event.ignore() 
+                    return            
+            event.acceptProposedAction()
             self.overlay.show()
         else:
             event.ignore()
