@@ -50,7 +50,7 @@ class AttachDialog(QDialog):
         self.scroll_layout.setContentsMargins(0,0,0,10)
 
 
-        self.attachments = []
+        self.attachments: list[tuple[QWidget, str, bool]] = []
         for file in self.data:
             if file.endswith(picture_type):
                 label = QLabel(self)
@@ -68,8 +68,8 @@ class AttachDialog(QDialog):
 
         main.addWidget(self.scroll_area)
 
-        for i in range(len(self.attachments)):
-            if self.attachments[i][1].endswith(picture_type):
+        for item in self.attachments:
+            if item[1].endswith(picture_type):
                 self.compress_img = QCheckBox("Compress images", self)
                 self.compress_img.setChecked(True)
                 self.compress_img.stateChanged.connect(self.on_compress_images_state_changed)
@@ -146,8 +146,8 @@ class AttachDialog(QDialog):
 
     def dialog_accept(self):
         files = []
-        for attachment in self.attachments:
-            _, file, compressed = attachment
+        for item in self.attachments:
+            _, file, compressed = item
             files.append((file, compressed))
         self.parent().on_dialog_finished(QDialog.Accepted, files)
     

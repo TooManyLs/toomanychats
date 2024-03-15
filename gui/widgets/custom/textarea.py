@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt
 
 class TextArea(QTextEdit):
     def __init__(self, *args, **kwargs):
@@ -28,10 +28,7 @@ class TextArea(QTextEdit):
     
     def insertFromMimeData(self, source):
         if source.hasUrls():
-            source_urls = source.urls()
-            files = []
-            for url in source_urls:
-                files.append(QUrl.path(url)[1:])
+            files = [u.toLocalFile() for u in source.urls()]
             try:
                 self.parent().attach_file(files)
             except AttributeError:
