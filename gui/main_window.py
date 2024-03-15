@@ -84,6 +84,11 @@ class MainWindow(QMainWindow):
             event.accept()
     
     def dragEnterEvent(self, event):
+        try:
+            if self.main_widget.dialog.isVisible():
+                return
+        except:
+            pass
         if event.mimeData().hasUrls() and self.stacked_layout.currentIndex() == 3:
             for url in event.mimeData().urls():
                 if os.path.isdir(url.toLocalFile()):

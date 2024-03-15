@@ -1,3 +1,5 @@
+import os
+
 from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
 from PySide6.QtCore import Qt
@@ -28,6 +30,9 @@ class TextArea(QTextEdit):
     
     def insertFromMimeData(self, source):
         if source.hasUrls():
+            for url in source.urls():
+                if os.path.isdir(url.toLocalFile()):
+                    return
             files = [u.toLocalFile() for u in source.urls()]
             try:
                 self.parent().attach_file(files)
@@ -46,3 +51,9 @@ class TextArea(QTextEdit):
                 self.parent().parent().on_send()
         else:
             super().keyPressEvent(event)
+
+    def dragEnterEvent(self, e) -> None:
+        if e.mimeData().hasUrls():
+            e.ignore()
+            return
+        return super().dragEnterEvent(e)

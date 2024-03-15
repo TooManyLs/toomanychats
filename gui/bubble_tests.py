@@ -191,6 +191,11 @@ More geese than swans now live, more fools than wise.""",
         event.accept()
 
     def dragEnterEvent(self, event):
+        try:
+            if self.dialog.isVisible():
+                return
+        except:
+            pass
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
                 if os.path.isdir(url.toLocalFile()):
