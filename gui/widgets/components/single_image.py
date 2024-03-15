@@ -11,8 +11,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import (
     QCursor, 
-    QPainter, 
-    QBrush, 
+    QPainter,  
     QPixmap, 
     QImageReader, 
     QMovie, 
@@ -114,11 +113,6 @@ class SingleImage(QLabel):
                 Qt.SmoothTransformation
             )
             path = QPainterPath()
-            brush = QBrush(pixmap.scaled(
-                self.frameSize(),
-                Qt.KeepAspectRatioByExpanding,
-                Qt.SmoothTransformation))
-            painter.setBrush(brush)
             path.addRoundedRect(QRectF(self.rect()), 12, 12)
             painter.setClipPath(path)
             painter.drawPixmap(self.rect(), pixmap)

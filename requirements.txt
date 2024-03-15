@@ -1,4 +1,4 @@
 pillow
-psycopg
+psycopg2
 pycryptodome
 pyside6
