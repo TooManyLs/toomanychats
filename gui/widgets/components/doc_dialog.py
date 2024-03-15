@@ -23,6 +23,8 @@ from PySide6.QtGui import (
 from .scroll_area import ScrollArea
 from .doc_attachment import DocAttachment
 
+picture_type = (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp")
+
 class Overlay(QWidget):
     def __init__(self, parent=None):
         super(Overlay, self).__init__(parent)
@@ -33,7 +35,6 @@ class AttachDialog(QDialog):
     def __init__(self, parent=None, files: list[str]=None):
         super(AttachDialog, self).__init__(parent)
         self.data = files
-        print(self.data)
         self.setWindowFlag(Qt.FramelessWindowHint, True)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setGeometry(0, 0, 350, 400)
@@ -49,9 +50,9 @@ class AttachDialog(QDialog):
         self.scroll_layout.setContentsMargins(0,0,0,10)
 
 
-        self.pics = []
+        self.attachments = []
         for file in self.data:
-            if file.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+            if file.endswith(picture_type):
                 label = QLabel(self)
                 pixmap = QPixmap(file)
                 pixmap = pixmap.scaled(
@@ -59,18 +60,21 @@ class AttachDialog(QDialog):
                     Qt.SmoothTransformation)
                 label.setPixmap(pixmap)
                 self.scroll_layout.addWidget(label, alignment=Qt.AlignCenter)
-                self.pics.append((label, file))
+                self.attachments.append((label, file, True))
             else:
                 doc = DocAttachment(file, attachment=True)
                 self.scroll_layout.addWidget(doc, alignment=Qt.AlignCenter)
+                self.attachments.append((doc, file, False))
 
         main.addWidget(self.scroll_area)
 
-        if self.pics:
-            self.compress_img = QCheckBox("Compress images", self)
-            self.compress_img.setChecked(True)
-            self.compress_img.stateChanged.connect(self.on_compress_images_state_changed)
-            main.addWidget(self.compress_img)
+        for i in range(len(self.attachments)):
+            if self.attachments[i][1].endswith(picture_type):
+                self.compress_img = QCheckBox("Compress images", self)
+                self.compress_img.setChecked(True)
+                self.compress_img.stateChanged.connect(self.on_compress_images_state_changed)
+                main.addWidget(self.compress_img)
+                break
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
@@ -115,17 +119,20 @@ class AttachDialog(QDialog):
             """
             )
 
-        self.cancel.clicked.connect(self.reject)
-        self.send.clicked.connect(self.accept)
+        self.cancel.clicked.connect(self.dialog_reject)
+        self.send.clicked.connect(self.dialog_accept)
 
     def on_compress_images_state_changed(self, state):
-        for i in range(len(self.pics)):
-            widget, file = self.pics[i]
+        for i in range(len(self.attachments)):
+            widget, file, _ = self.attachments[i]
+            if not file.endswith(picture_type):
+                continue
+
             if isinstance(widget, QLabel) and state == 0:
                 doc = DocAttachment(file, attachment=True)
                 self.scroll_layout.replaceWidget(widget, doc)
                 widget.deleteLater()
-                self.pics[i] = (doc, file)
+                self.attachments[i] = (doc, file, False)
             elif isinstance(widget, DocAttachment) and state == 2:
                 label = QLabel(self)
                 pixmap = QPixmap(file)
@@ -135,7 +142,17 @@ class AttachDialog(QDialog):
                 label.setPixmap(pixmap)
                 self.scroll_layout.replaceWidget(widget, label)
                 widget.deleteLater()
-                self.pics[i] = (label, file)
+                self.attachments[i] = (label, file, True)
+
+    def dialog_accept(self):
+        files = []
+        for attachment in self.attachments:
+            _, file, compressed = attachment
+            files.append((file, compressed))
+        self.parent().on_dialog_finished(QDialog.Accepted, files)
+    
+    def dialog_reject(self):
+        self.parent().on_dialog_finished(QDialog.Rejected, [])
 
     def showEvent(self, event):
         try:

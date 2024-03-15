@@ -1,8 +1,8 @@
 import sys
 import atexit
 import socket
-from PySide6.QtGui import QPalette, QColor
 
+from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import (
     QApplication, 
     QMainWindow, 
@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
         self.overlay.resize(self.size())
         event.accept()
 
+    # Keeps dialog in the center of the window
     def moveEvent(self, event):
         if hasattr(self.main_widget, 'dialog'):
             parent_geometry = self.geometry()
@@ -74,12 +75,11 @@ class MainWindow(QMainWindow):
                 parent_geometry.center() - self.main_widget.dialog.rect().center())
 
     def resizeEvent(self, event):
-        # Keeps dialog in the center of the window
+        self.overlay.resize(event.size())
         if hasattr(self.main_widget, 'dialog'):
             parent_geometry = self.geometry()
             self.main_widget.dialog.move(
                 parent_geometry.center() - self.main_widget.dialog.rect().center())
-            self.overlay.resize(event.size())
             event.accept()
 
 app = QApplication(sys.argv)

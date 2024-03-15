@@ -1,5 +1,3 @@
-from base64 import b64decode, b64encode
-from datetime import datetime
 import os
 
 from PySide6.QtWidgets import (
@@ -193,23 +191,23 @@ class ChatWidget(QWidget):
         QTimer.singleShot(1, self.scroll_down)
     
     def attach_file(self):
-        files, filter = QFileDialog().getOpenFileNames(
-            self, "Choose images", 
-            filter="Image files (*.jpg *.jpeg *.png *.bmp *.webp *.gif);;All files (*.*)")
+        files, _ = QFileDialog().getOpenFileNames(
+            self, "Choose Files", 
+            filter="All files (*.*)")
         if files:
             self.dialog = AttachDialog(self, files=files)
             self.window().overlay.show()
             self.dialog.show()
-            self.dialog.finished.connect(lambda: self.on_dialog_finished(self.dialog.result(), files, filter))
 
-    def on_dialog_finished(self, result, files, filter):
+    def on_dialog_finished(self, result, files):
+        self.dialog.hide()
         self.window().overlay.hide()
         if result == QDialog.Accepted:
-            self.display_attach(files, filter)
+            self.display_attach(files)
 
-    def display_attach(self, files, filter):
-        for f in files:
-            if filter == "Image files (*.jpg *.jpeg *.png *.bmp *.webp *.gif)":
+    def display_attach(self, files):
+        for f, pic in files:
+            if pic:
                 compressed = compress_image(f)
                 with open(compressed, "rb") as image:
                     data = image.read()
