@@ -129,7 +129,9 @@ class ChatWidget(QWidget):
             }     
             """
             )
-        
+        self.scroll_area.setFocusProxy(self.send_field)
+        self.attach.setFocusProxy(self.send_field)
+        self.button.setFocusProxy(self.send_field)
 
         input_layout = QHBoxLayout()
         input_layout.setContentsMargins(8,0,8,7)
@@ -167,22 +169,26 @@ class ChatWidget(QWidget):
             with open(f"./cache/img/{name}", "wb") as image:
                 image.write(msg)
             img = SingleImage(f"./cache/img/{name}")
+            img.setFocusProxy(self.send_field)
             self.layout.addWidget(img, alignment=Qt.AlignLeft)
         elif ext and ext not in picture_type:
             with open(f"./cache/attachments/{ext}", "wb") as doc:
                 doc.write(msg)
             doc = DocAttachment(f"./cache/attachments/{ext}")
+            doc.setFocusProxy(self.send_field)
             self.layout.addWidget(doc, alignment=Qt.AlignLeft)
         else:
             msg = msg.decode('utf-8')
             msg, nametag = msg.rsplit("|", 1)
             bubble = TextBubble(msg, nametag)
+            bubble.setFocusProxy(self.send_field)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
 
     def on_send(self):
         to_send: str = self.send_field.toPlainText().strip()
         if to_send:
             bubble = TextBubble(to_send)
+            bubble.setFocusProxy(self.send_field)
             self.layout.addWidget(bubble, alignment=Qt.AlignRight)
             data_to_send = encrypt_aes((to_send + f"|{self.name}").encode('utf-8'))
             self._send_chunks(pack_data(data_to_send, self.server_pubkey))
@@ -217,6 +223,7 @@ class ChatWidget(QWidget):
                     data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
                     self._send_chunks(pack_data(data, self.server_pubkey))
                 img = SingleImage(compressed)
+                img.setFocusProxy(self.send_field)
                 self.layout.addWidget(img, alignment=Qt.AlignRight)
             else:
                 with open(f, "rb") as doc:
@@ -226,6 +233,7 @@ class ChatWidget(QWidget):
                     data = (b"DOCUMENT:" + filename.encode('utf-8') + b'<doc>' + data, key)
                     self._send_chunks(pack_data(data, self.server_pubkey))
                 doc = DocAttachment(f)
+                doc.setFocusProxy(self.send_field)
                 self.layout.addWidget(doc, alignment=Qt.AlignRight)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
