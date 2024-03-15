@@ -2,6 +2,7 @@ import os
 import binascii
 from datetime import datetime
 import tempfile
+from functools import cache
 
 from PIL import Image, ImageOps
 
@@ -11,6 +12,7 @@ def generate_name() -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return f"{dust}_{timestamp}"
 
+@cache
 def compress_image(image_path: str, max_size: int=1280, 
                    *, gif_compression: bool=False, temp: bool=False) -> str:
     if image_path[-4:] == ".gif" and not gif_compression:
