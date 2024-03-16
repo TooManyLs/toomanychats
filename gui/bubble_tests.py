@@ -176,7 +176,7 @@ More geese than swans now live, more fools than wise.""",
         if hasattr(self, 'dialog'):
             parent_geometry = self.geometry()
             self.dialog.move(parent_geometry.center() - self.dialog.rect().center())
-            self.dialog.resize_center()
+            self.dialog.update_geometry()
             event.accept()
         # Resizes all widgets contained in scroll area
         for c in self.chat_area.children():

@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
             parent_geometry = self.geometry()
             self.main_widget.dialog.move(
                 parent_geometry.center() - self.main_widget.dialog.rect().center())
+            self.main_widget.dialog.update_geometry()
             event.accept()
     
     def dragEnterEvent(self, event):
