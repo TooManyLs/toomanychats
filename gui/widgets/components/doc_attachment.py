@@ -22,7 +22,11 @@ from PySide6.QtGui import (
 from PySide6.QtCore import Qt, QEvent
 from .image_preview import ImagePreview
 
-picture_type = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif")
+picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg', 
+                '.pbm', '.pgm', '.png', '.ppm', '.tga', '.tif', '.tiff', 
+                '.webp', '.xbm', '.jfif', '.dds', '.cr2', '.dng', '.heic', 
+                '.heif', '.jp2', '.jpe', '.jps', '.nef', '.psd', '.ras', 
+                '.sgi', '.avif', '.avifs')
 
 class EllipsisLabel(QLabel):
     def __init__(self, *args, **kwargs):
@@ -154,11 +158,14 @@ class DocAttachment(QFrame):
     
     def mouseReleaseEvent(self, ev):
         absolute_path = os.path.abspath(self.path)
-        if ev.button() == Qt.LeftButton:
-            if platform.system() == 'Windows':
-                os.startfile(absolute_path)
-            elif platform.system() == 'Darwin':  # macOS
-                subprocess.call(('open', absolute_path))
-            else:  # linux variants
-                subprocess.call(('xdg-open', absolute_path))
+        if self.path.endswith(picture_type):
+            if ev.button() == Qt.LeftButton:
+                if platform.system() == 'Windows':
+                    os.startfile(absolute_path)
+                elif platform.system() == 'Darwin':  # macOS
+                    subprocess.call(('open', absolute_path))
+                else:  # linux variants
+                    subprocess.call(('xdg-open', absolute_path))
+        else:
+            subprocess.Popen(f'explorer /select,"{self.path}"')
         return super().mouseReleaseEvent(ev)

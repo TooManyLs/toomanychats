@@ -5,6 +5,7 @@ import tempfile
 from functools import cache
 
 from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener, register_avif_opener
 
 def generate_name() -> str:
     """Generates random name with timestamp"""
@@ -23,6 +24,8 @@ def compress_image(image_path: str, max_size: int=1280,
     else:
         output_path = f"./cache/img/{generate_name()}.jpg"
 
+    register_heif_opener()
+    register_avif_opener()
     with Image.open(image_path) as img:
         img = ImageOps.exif_transpose(img)
         width, height = img.size
