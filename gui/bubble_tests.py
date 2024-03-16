@@ -118,7 +118,6 @@ More geese than swans now live, more fools than wise.""",
             if isinstance(o, QWidget):
                 o.setFocusProxy(self.text_input)
 
-        
     def attach_file(self, files=None):
         if not files:
             files, _ = QFileDialog().getOpenFileNames(
@@ -177,6 +176,7 @@ More geese than swans now live, more fools than wise.""",
         if hasattr(self, 'dialog'):
             parent_geometry = self.geometry()
             self.dialog.move(parent_geometry.center() - self.dialog.rect().center())
+            self.dialog.resize_center()
             event.accept()
         # Resizes all widgets contained in scroll area
         for c in self.chat_area.children():

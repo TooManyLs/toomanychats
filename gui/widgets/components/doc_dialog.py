@@ -8,11 +8,12 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QLabel, 
     QCheckBox, 
-
+    QApplication
     )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
-    QColor, 
+    QColor,
+    QDragEnterEvent, 
     QPainter, 
     QPainterPath, 
     QBrush, 
@@ -22,8 +23,13 @@ from PySide6.QtGui import (
 
 from .scroll_area import ScrollArea
 from .doc_attachment import DocAttachment
+from ..utils.tools import compress_image
 
-picture_type = (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp")
+picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg', 
+                '.pbm', '.pgm', '.png', '.ppm', '.tga', '.tif', '.tiff', 
+                '.webp', '.xbm', '.jfif', '.dds', '.cr2', '.dng', '.heic', 
+                '.heif', '.jp2', '.jpe', '.jps', '.nef', '.psd', '.ras', 
+                '.sgi', '.avif', '.avifs')
 
 class Overlay(QWidget):
     def __init__(self, parent=None):
@@ -47,6 +53,7 @@ class AttachDialog(QDialog):
         self.scroll_contents = QWidget()
         self.scroll_area.setWidget(self.scroll_contents)
         self.scroll_layout = QVBoxLayout(self.scroll_contents)
+        self.scroll_layout.setAlignment(Qt.AlignTop)
         self.scroll_layout.setContentsMargins(0,0,0,10)
 
 
@@ -54,7 +61,7 @@ class AttachDialog(QDialog):
         for file in self.data:
             if file.endswith(picture_type):
                 label = QLabel(self)
-                pixmap = QPixmap(file)
+                pixmap = QPixmap(compress_image(file, temp=True))
                 pixmap = pixmap.scaled(
                     300, 270, Qt.KeepAspectRatio, 
                     Qt.SmoothTransformation)
@@ -135,7 +142,7 @@ class AttachDialog(QDialog):
                 self.attachments[i] = (doc, file, False)
             elif isinstance(widget, DocAttachment) and state == 2:
                 label = QLabel(self)
-                pixmap = QPixmap(file)
+                pixmap = QPixmap(compress_image(file, temp=True))
                 pixmap = pixmap.scaled(
                     300, 270, Qt.KeepAspectRatio, 
                     Qt.SmoothTransformation)
@@ -143,6 +150,22 @@ class AttachDialog(QDialog):
                 self.scroll_layout.replaceWidget(widget, label)
                 widget.deleteLater()
                 self.attachments[i] = (label, file, True)
+        QApplication.processEvents()
+        QTimer.singleShot(1, self.update_geometry)
+
+    def update_geometry(self):
+        try:
+            parent = self.parent().parent().parent()
+        except AttributeError:
+            parent = self.parent()
+        window_height = parent.height()
+        contents = self.scroll_contents.children()[1:]
+        content_height = 97
+        for w in contents:
+            content_height += w.height() + 9
+        self.setFixedHeight(min(content_height, window_height * 0.9))
+        self.move(parent.geometry().center() - self.rect().center())
+        
 
     def dialog_accept(self):
         files = []
@@ -155,12 +178,8 @@ class AttachDialog(QDialog):
         self.parent().on_dialog_finished(QDialog.Rejected, [])
 
     def showEvent(self, event):
-        try:
-            parent_geometry = self.parent().parent().parent().geometry()
-        except AttributeError:
-            parent_geometry = self.parent().geometry()
-
-        self.move(parent_geometry.center() - self.rect().center())
+        QApplication.processEvents()
+        QTimer.singleShot(1, self.update_geometry)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -169,3 +188,7 @@ class AttachDialog(QDialog):
         path.addRoundedRect(self.rect(), 12, 12)
         painter.fillPath(path, QBrush(QColor("#1e1e1e")))
         painter.strokePath(path, QPen(Qt.NoPen))
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        event.acceptProposedAction()
+        return super().dragEnterEvent(event)
