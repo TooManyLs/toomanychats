@@ -18,7 +18,9 @@ from PySide6.QtGui import (
     QPainterPath, 
     QBrush, 
     QPen,
-    QPixmap
+    QPixmap,
+    QMovie,
+    QImageReader
     )
 
 from .scroll_area import ScrollArea
@@ -59,13 +61,8 @@ class AttachDialog(QDialog):
 
         self.attachments: list[tuple[QWidget, str, bool]] = []
         for file in self.data:
-            if file.endswith(picture_type):
-                label = QLabel(self)
-                pixmap = QPixmap(compress_image(file, temp=True))
-                pixmap = pixmap.scaled(
-                    300, 270, Qt.KeepAspectRatio, 
-                    Qt.SmoothTransformation)
-                label.setPixmap(pixmap)
+            if file.lower().endswith(picture_type):
+                label = self.set_image(file)
                 self.scroll_layout.addWidget(label, alignment=Qt.AlignCenter)
                 self.attachments.append((label, file, True))
             else:
@@ -76,7 +73,7 @@ class AttachDialog(QDialog):
         main.addWidget(self.scroll_area)
 
         for item in self.attachments:
-            if item[1].endswith(picture_type):
+            if item[1].lower().endswith(picture_type):
                 self.compress_img = QCheckBox("Compress images", self)
                 self.compress_img.setChecked(True)
                 self.compress_img.stateChanged.connect(self.on_compress_images_state_changed)
@@ -132,7 +129,7 @@ class AttachDialog(QDialog):
     def on_compress_images_state_changed(self, state):
         for i in range(len(self.attachments)):
             widget, file, _ = self.attachments[i]
-            if not file.endswith(picture_type):
+            if not file.lower().endswith(picture_type):
                 continue
 
             if isinstance(widget, QLabel) and state == 0:
@@ -141,12 +138,7 @@ class AttachDialog(QDialog):
                 widget.deleteLater()
                 self.attachments[i] = (doc, file, False)
             elif isinstance(widget, DocAttachment) and state == 2:
-                label = QLabel(self)
-                pixmap = QPixmap(compress_image(file, temp=True))
-                pixmap = pixmap.scaled(
-                    300, 270, Qt.KeepAspectRatio, 
-                    Qt.SmoothTransformation)
-                label.setPixmap(pixmap)
+                label = self.set_image(file)
                 self.scroll_layout.replaceWidget(widget, label)
                 widget.deleteLater()
                 self.attachments[i] = (label, file, True)
@@ -160,7 +152,8 @@ class AttachDialog(QDialog):
             parent = self.parent()
         window_height = parent.height()
         contents = self.scroll_contents.children()[1:]
-        content_height = 97
+        offset = 97 if hasattr(self, "compress_img") else 65
+        content_height = offset
         for w in contents:
             content_height += w.height() + 9
         self.setFixedHeight(min(content_height, window_height * 0.9))
@@ -192,3 +185,28 @@ class AttachDialog(QDialog):
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         event.acceptProposedAction()
         return super().dragEnterEvent(event)
+
+    def set_image(self, path: str) -> QLabel:
+        label = QLabel(self)
+        label.setScaledContents(True)
+        if path[-4:] == ".gif":
+            mov = QMovie(path)
+            label.setMovie(mov)
+            mov.start()
+            _pixmap = mov.currentPixmap()
+            aspect_ratio = _pixmap.height() / _pixmap.width()
+            if aspect_ratio >= 1:
+                m = _pixmap.height() / 270
+            else:
+                m = _pixmap.width() / 300
+            label.setFixedSize(_pixmap.width()/m, _pixmap.height()/m)
+        else:
+            image_reader = QImageReader(compress_image(path, temp=True))
+            image_reader.setAutoTransform(True)
+            image = image_reader.read()
+            pixmap = QPixmap.fromImage(image)
+            pixmap = pixmap.scaled(
+                300, 270, Qt.KeepAspectRatio, 
+                Qt.SmoothTransformation)
+            label.setPixmap(pixmap)
+        return label
