@@ -253,6 +253,9 @@ class ChatWidget(QWidget):
             if self.scroll_area.old_max > 0 else 0)
 
     def resizeEvent(self, event):
+        if hasattr(self, 'dialog'):
+            self.dialog.update_geometry()
+            event.accept()
         for c in self.chat_area.children():
             if c.isWidgetType():
                 try:

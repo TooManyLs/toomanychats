@@ -174,8 +174,6 @@ More geese than swans now live, more fools than wise.""",
         # Keeps dialog in the center of the window
         self.overlay.resize(event.size())
         if hasattr(self, 'dialog'):
-            parent_geometry = self.geometry()
-            self.dialog.move(parent_geometry.center() - self.dialog.rect().center())
             self.dialog.update_geometry()
             event.accept()
         # Resizes all widgets contained in scroll area
