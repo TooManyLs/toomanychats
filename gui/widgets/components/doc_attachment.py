@@ -84,7 +84,7 @@ class DocAttachment(QFrame):
         elif kb > 1:
             filesize = f"{kb:.1f} KB"
 
-        if ext in picture_type:
+        if ext.lower() in picture_type:
             self.preview = ImagePreview(path)
         else: 
             self.preview = ImagePreview("./public/document.png")
@@ -158,7 +158,7 @@ class DocAttachment(QFrame):
     
     def mouseReleaseEvent(self, ev):
         absolute_path = os.path.abspath(self.path)
-        if self.path.endswith(picture_type):
+        if self.path.lower().endswith(picture_type):
             if ev.button() == Qt.LeftButton:
                 if platform.system() == 'Windows':
                     os.startfile(absolute_path)
