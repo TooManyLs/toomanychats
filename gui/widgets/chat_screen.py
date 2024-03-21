@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
     QDialog,
     )
 from PySide6.QtGui import Qt, QIcon, QCursor
-from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer
+from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer, QMimeData
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
@@ -20,7 +21,8 @@ from .utils.encryption import (
     encrypt_aes, 
     decrypt_aes,
     pack_data,
-    unpack_data
+    unpack_data,
+    recv_encrypted
     )
 from .utils.tools import generate_name, compress_image
 from .custom import TextArea
@@ -183,13 +185,23 @@ class ChatWidget(QWidget):
             self.layout.addWidget(doc, alignment=Qt.AlignLeft)
         else:
             msg = msg.decode('utf-8')
-            msg, nametag = msg.rsplit("|", 1)
+            try:
+                msg, nametag = msg.rsplit("|", 1)
+            except ValueError:
+                mime_data = QMimeData()
+                mime_data.setText(msg)
+                QApplication.clipboard().setMimeData(mime_data)
+                print("copied")
+                return
             bubble = TextBubble(msg, nametag)
             bubble.setFocusProxy(self.send_field)
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
 
-    def on_send(self):
-        to_send: str = self.send_field.toPlainText().strip()
+    def on_send(self, to_send=""):
+        if to_send == "@get_code":
+            self.s.send("/code".encode('utf-8') + b'-!-END-!-')
+            return
+        to_send: str = self.send_field.toPlainText().strip()     
         if to_send:
             bubble = TextBubble(to_send)
             bubble.setFocusProxy(self.send_field)

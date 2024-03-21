@@ -48,13 +48,23 @@ class CustomMenu(QMenu):
             """
             )
 
-        self.logout_btn.clicked.connect(self.reinit)
+        self.logout_btn.clicked.connect(self.log_out)
+        self.code_btn.clicked.connect(self.get_code)
 
-    def reinit(self):
+    def log_out(self):
         parent = self.parent().parent().parent().parent()
         if parent is None:
+            # for tests
             parent = self.parent().parent().parent()
         parent.initUI()
+
+    def get_code(self):
+        parent = self.parent().parent()
+        try:
+            parent.on_send("@get_code")
+        except AttributeError:
+            # for tests
+            pass
 
     def showEvent(self, event):
         button = self.parent()

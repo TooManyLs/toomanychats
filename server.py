@@ -76,6 +76,7 @@ async def listen_for_client(reader, writer, username):
                     cli.write(send_encrypted(msg, aes), pub).encode('utf-8')
                     continue
             except Exception:
+                msg = data.decode('utf-8')
                 await handle_command(msg, reader, writer, username)
                 continue
         except (OSError, ConnectionResetError):
@@ -134,11 +135,10 @@ async def handle_command(cmd, reader, writer, username=None):
         writer.write(send_encrypted(encrypt_aes(userlist.encode('utf-8')), user_pub)\
                 .encode('utf-8'))
     elif cmd == "/code":
-        code = f"[Server]\nYour friend code:\n{hr}\n{f_codes[username]}\n{hr}"
+        code = f"{f_codes[username]}"
         user = db.get_user(conn, username, "public_key")
         user_pub = user["public_key"].encode('utf-8')
-        writer.write(send_encrypted(encrypt_aes(code.encode('utf-8')), user_pub)\
-                .encode('utf-8'))
+        await send_chunks(writer, pack_data(encrypt_aes(code.encode('utf-8')), user_pub))
     conn.close()
 
 async def handle_client(reader, writer):
