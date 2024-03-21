@@ -30,6 +30,7 @@ from .components import (
     ScrollArea, 
     DocAttachment,
     AttachDialog,
+    ChatHeader,
     )
 
 class Worker(QObject):
@@ -139,6 +140,9 @@ class ChatWidget(QWidget):
         input_layout.addWidget(self.send_field)
         input_layout.addWidget(self.button)
 
+        header = ChatHeader()
+
+        main_layout.addWidget(header)
         main_layout.addWidget(self.scroll_area)
         main_layout.addLayout(input_layout)
 
