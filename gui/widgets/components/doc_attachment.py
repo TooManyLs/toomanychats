@@ -83,6 +83,10 @@ class DocAttachment(QFrame):
             filesize = f"{mb:.1f} MB"
         elif kb > 1:
             filesize = f"{kb:.1f} KB"
+        elif str(filesize)[-1] == "1":
+            filesize = f"{filesize} byte"
+        else:
+            filesize = f"{filesize} bytes"
 
         if ext.lower() in picture_type:
             self.preview = ImagePreview(path)

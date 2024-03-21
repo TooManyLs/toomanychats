@@ -90,7 +90,7 @@ class TextBubble(QTextEdit):
             text_height += 13
         self.setFixedHeight(text_height)
 
-    def focusOutEvent(self, event):       
+    def focusOutEvent(self, event):
         text_cursor = self.textCursor()
         text_cursor.clearSelection()
         self.setTextCursor(text_cursor)
