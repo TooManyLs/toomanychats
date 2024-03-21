@@ -83,6 +83,17 @@ class SingleImage(QLabel):
 
         self.setFixedSize(new_width, new_height)
 
+        mask = QPixmap(self.size())
+        mask.fill(Qt.transparent)
+        painter = QPainter(mask)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(Qt.black)
+        painter.setPen(Qt.NoPen)
+
+        painter.drawRoundedRect(self.rect(), 12, 12)
+        painter.end()
+        self.setMask(mask.mask())
+
     def resizeEvent(self, event):
         while self.counter < 1:
             self.compute_size()
@@ -90,30 +101,3 @@ class SingleImage(QLabel):
             self.layout.addWidget(self.time_text, 
                          alignment=Qt.AlignBottom | Qt.AlignRight)
         return super().resizeEvent(event)
-
-    def setPixmap(self, arg__1):
-        if not arg__1:
-            return
-        self._pixmap = arg__1
-    
-    def paintEvent(self, arg__1):
-        super().paintEvent(arg__1)
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing, True)
-
-        if isinstance(self._pixmap, QMovie):
-            pixmap = self._pixmap.currentPixmap()
-        else:
-            pixmap = self._pixmap
-
-            pixmap = pixmap.scaled(
-                self.frameSize(),
-                Qt.KeepAspectRatioByExpanding,
-                Qt.SmoothTransformation
-            )
-            path = QPainterPath()
-            path.addRoundedRect(QRectF(self.rect()), 12, 12)
-            painter.setClipPath(path)
-            painter.drawPixmap(self.rect(), pixmap)
-            painter.end()
