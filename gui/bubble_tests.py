@@ -15,14 +15,17 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QCursor
 
-from widgets.components import TextBubble, SingleImage, ScrollArea, DocAttachment
-from widgets.components.doc_dialog import AttachDialog, Overlay
+from widgets.components import TextBubble, SingleImage, ScrollArea, DocAttachment, AttachDialog, Overlay
+from widgets.components.chat_header import ChatHeader
 from widgets.custom import TextArea
 from widgets.utils.tools import compress_image
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.initUI()
+
+    def initUI(self):
         self.setWindowTitle("Chatroom")
         self.overlay = Overlay(self)
         self.overlay.hide()
@@ -57,8 +60,11 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.text_input)
         input_layout.addWidget(self.send_button)
 
+        self.header = ChatHeader()
+
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)
+        main_layout.addWidget(self.header)
         main_layout.addWidget(self.scroll_area)
         main_layout.addLayout(input_layout)
 
