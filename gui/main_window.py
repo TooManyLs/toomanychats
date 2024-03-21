@@ -24,6 +24,14 @@ SERVER_PORT = 5002
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        try:
+            self.s.close()
+        except AttributeError:
+            pass
+        
         self.s = socket.socket()
         print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
         self.s.connect((SERVER_HOST, SERVER_PORT))
