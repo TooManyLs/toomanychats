@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -22,7 +21,6 @@ from .utils.encryption import (
     decrypt_aes,
     pack_data,
     unpack_data,
-    recv_encrypted
     )
 from .utils.tools import generate_name, compress_image
 from .custom import TextArea
@@ -169,7 +167,7 @@ class ChatWidget(QWidget):
     @Slot(bytes, bytes)
     def on_message_received(self, msg, ext):
         picture_type = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif")
-        ext = ext.decode('utf-8')
+        ext = ext.decode()
         if ext and ext in picture_type:
             name = generate_name() + ext
             with open(f"./cache/img/{name}", "wb") as image:
@@ -184,7 +182,7 @@ class ChatWidget(QWidget):
             doc.setFocusProxy(self.send_field)
             self.layout.addWidget(doc, alignment=Qt.AlignLeft)
         else:
-            msg = msg.decode('utf-8')
+            msg = msg.decode()
             try:
                 msg, nametag = msg.rsplit("|", 1)
             except ValueError:
@@ -199,14 +197,14 @@ class ChatWidget(QWidget):
 
     def on_send(self, to_send=""):
         if to_send == "@get_code":
-            self.s.send("/code".encode('utf-8') + b'-!-END-!-')
+            self.s.send("/code".encode() + b'-!-END-!-')
             return
         to_send: str = self.send_field.toPlainText().strip()     
         if to_send:
             bubble = TextBubble(to_send)
             bubble.setFocusProxy(self.send_field)
             self.layout.addWidget(bubble, alignment=Qt.AlignRight)
-            data_to_send = encrypt_aes((to_send + f"|{self.name}").encode('utf-8'))
+            data_to_send = encrypt_aes((to_send + f"|{self.name}").encode())
             self._send_chunks(pack_data(data_to_send, self.server_pubkey))
         self.send_field.clear()
         QApplication.processEvents()
@@ -236,7 +234,7 @@ class ChatWidget(QWidget):
                     data = image.read()
                     data, key = encrypt_aes(data)
                     _, ext = os.path.splitext(compressed)
-                    data = (b"IMAGE:" + ext.encode('utf-8') + b'<img>' + data, key)
+                    data = (b"IMAGE:" + ext.encode() + b'<img>' + data, key)
                     self._send_chunks(pack_data(data, self.server_pubkey))
                 img = SingleImage(compressed)
                 img.setFocusProxy(self.send_field)
@@ -246,7 +244,7 @@ class ChatWidget(QWidget):
                     data = doc.read()
                     data, key = encrypt_aes(data)
                     filename = os.path.basename(f)
-                    data = (b"DOCUMENT:" + filename.encode('utf-8') + b'<doc>' + data, key)
+                    data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
                     self._send_chunks(pack_data(data, self.server_pubkey))
                 doc = DocAttachment(f)
                 doc.setFocusProxy(self.send_field)

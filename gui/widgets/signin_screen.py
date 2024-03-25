@@ -119,29 +119,29 @@ class SignIn(QWidget):
             name = self.name_f.text()
             password = self.pass_f.text()
 
-            self.s.send(name.encode('utf-8'))
+            self.s.send(name.encode())
             try:
                 with open(f"keys/{name}_private.pem", "rb") as f:
                     my_pvtkey = RSA.import_key(f.read())
                 my_cipher = PKCS1_OAEP.new(my_pvtkey)
-                data = self.s.recv(2048).decode('utf-8')
+                data = self.s.recv(2048).decode()
                 if data == "failed":
                     raise Exception
                 data, aes, pub = recv_encrypted(data)
                 aes = my_cipher.decrypt(aes)
-                server_resp = decrypt_aes(data, aes).decode('utf-8')
+                server_resp = decrypt_aes(data, aes).decode()
                 salt, challenge = server_resp.split("|")
-                key = generate_key(password, b64decode(salt.encode('utf-8')))
-                response = decrypt_aes(b64decode(challenge.encode('utf-8')),
-                                       key).decode('utf-8')
+                key = generate_key(password, b64decode(salt.encode()))
+                response = decrypt_aes(b64decode(challenge.encode()),
+                                       key).decode()
                 if response == "OK":
-                    self.s.send("OK".encode('utf-8'))
+                    self.s.send("OK".encode())
                     for f in self.fields:
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
                     self.name_signal.emit(name)
             except Exception:
-                self.s.send("Fail".encode('utf-8'))
+                self.s.send("Fail".encode())
                 self.incorrect.setText(
                     "Failed to authenticate:\nInvalid username or password.")
         if not self.pass_f.hasAcceptableInput():

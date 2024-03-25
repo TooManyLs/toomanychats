@@ -23,7 +23,7 @@ class CustomMenu(QMenu):
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
-        self.layout.setSpacing(0)
+        self.layout.setSpacing(1)
 
         self.code_btn = QPushButton("Your code")
         self.logout_btn = QPushButton("Log out")
@@ -37,6 +37,7 @@ class CustomMenu(QMenu):
 
         self.setStyleSheet(
             """
+            QMenu{background-color: #101010;}
             QPushButton{
                 border: none;
                 border-radius: 0;
@@ -83,10 +84,7 @@ class CustomMenu(QMenu):
         painter.drawRoundedRect(self.rect(), 12, 12)
         painter.end()
 
-        self.setMask(mask.mask())
-        
-        
-    
+        self.setMask(mask.mask())    
 
 class ChatHeader(QFrame):
     def __init__(self, *args, **kwargs):

@@ -65,5 +65,5 @@ class EnterWidget(QWidget):
         self.stacked_layout.setCurrentIndex(1)
 
     def on_sign_up_clicked(self):
-        self.s.send("/signup".encode('utf-8'))
+        self.s.send("/signup".encode())
         self.stacked_layout.setCurrentIndex(2)

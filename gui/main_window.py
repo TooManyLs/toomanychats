@@ -12,10 +12,7 @@ from PySide6.QtWidgets import (
     )
 from Crypto.PublicKey import RSA
 
-from widgets import EnterWidget
-from widgets import SignIn
-from widgets import SignUp
-from widgets import ChatWidget
+from widgets import EnterWidget, SignIn, SignUp, ChatWidget
 from widgets.components import Overlay
 
 SERVER_HOST = "127.0.0.1"

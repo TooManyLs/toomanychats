@@ -67,16 +67,16 @@ async def listen_for_client(reader, writer, username):
                         if u == username or cli == writer:
                             continue
                         user = db.get_user(conn, u, "public_key")
-                        pubkey = user["public_key"].encode('utf-8')
+                        pubkey = user["public_key"].encode()
                         await send_chunks(cli, pack_data((msg, dec_key), pubkey))
                 else:
                     user = db.get_by_pubkey(conn, 
-                                            pub.export_key().decode('utf-8'))
+                                            pub.export_key().decode())
                     cli = authenticated_users[user]
-                    cli.write(send_encrypted(msg, aes), pub).encode('utf-8')
+                    cli.write(send_encrypted(msg, aes), pub).encode()
                     continue
             except Exception:
-                msg = data.decode('utf-8')
+                msg = data.decode()
                 await handle_command(msg, reader, writer, username)
                 continue
         except (OSError, ConnectionResetError):
@@ -95,50 +95,50 @@ async def handle_command(cmd, reader, writer, username=None):
     if cmd == "/signup":
         try:
             data = await reader.read(1024)
-            if data.decode('utf-8') == "c":
+            if data.decode() == "c":
                 return
-            friend_code, friend = data.decode('utf-8').split("|")
+            friend_code, friend = data.decode().split("|")
             if f_codes[friend] == friend_code:
-                writer.write("approve".encode('utf-8'))
+                writer.write("approve".encode())
         except (KeyError, ValueError):
-            writer.write("reject".encode('utf-8'))
+            writer.write("reject".encode())
             return
         while True:
             data = await reader.read(2048)
-            reg_info = data.decode('utf-8')
+            reg_info = data.decode()
             if reg_info == "c":
                 return
             reg_info, aes, pub = recv_encrypted(reg_info)
             aes = s_cipher.decrypt(aes)
-            reg_info = decrypt_aes(reg_info, aes).decode('utf-8')
+            reg_info = decrypt_aes(reg_info, aes).decode()
             name, passw, salt, pubkey = reg_info.split("|")
             if db.get_user(conn, name, "name") is None:
                 writer.write(f"[+] You've successfully created an account!"
-                             .encode('utf-8'))
+                             .encode())
                 f_codes[friend] = generate_sha256()
                 db.add_user(
                     conn,
                     name,
-                    b64decode(passw.encode('utf-8')),
+                    b64decode(passw.encode()),
                     b64decode(salt),
-                    pubkey.encode('utf-8')
+                    pubkey.encode()
                 )
                 break
             else:
-                writer.write(f"[-] {name} is not available.".encode('utf-8'))
+                writer.write(f"[-] {name} is not available.".encode())
                 continue
     elif cmd == "/userlist":
         user = db.get_user(conn, username, "public_key")
-        user_pub = user["public_key"].encode('utf-8')
+        user_pub = user["public_key"].encode()
         userlist =\
          f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
-        writer.write(send_encrypted(encrypt_aes(userlist.encode('utf-8')), user_pub)\
-                .encode('utf-8'))
+        writer.write(send_encrypted(encrypt_aes(userlist.encode()), user_pub)\
+                .encode())
     elif cmd == "/code":
         code = f"{f_codes[username]}"
         user = db.get_user(conn, username, "public_key")
-        user_pub = user["public_key"].encode('utf-8')
-        await send_chunks(writer, pack_data(encrypt_aes(code.encode('utf-8')), user_pub))
+        user_pub = user["public_key"].encode()
+        await send_chunks(writer, pack_data(encrypt_aes(code.encode()), user_pub))
     conn.close()
 
 async def handle_client(reader, writer):
@@ -148,7 +148,7 @@ async def handle_client(reader, writer):
     writer.write(SERVER_RSA.public_key().export_key())
     while True:
         data = await reader.read(1024)
-        first_resp = data.decode('utf-8')
+        first_resp = data.decode()
         if not first_resp:
             writer.close()
             break
@@ -162,21 +162,21 @@ async def handle_client(reader, writer):
             username = first_resp
         if not username:
             data = await reader.read(2048)
-            username = data.decode('utf-8')
+            username = data.decode()
         user = db.get_user(conn, username)
         if user and username not in authenticated_users:
             password = user["password"]
             salt = user["salt"]
-            user_pub = user["public_key"].encode('utf-8')
-            challenge, _ = encrypt_aes("OK".encode('utf-8'), password)       
+            user_pub = user["public_key"].encode()
+            challenge, _ = encrypt_aes("OK".encode(), password)       
             challenge_string =\
-            f"{b64encode(salt).decode('utf-8')}|{b64encode(challenge).decode('utf-8')}"
+            f"{b64encode(salt).decode()}|{b64encode(challenge).decode()}"
             writer.write(send_encrypted(
-                encrypt_aes(challenge_string.encode('utf-8')), user_pub
-                ).encode('utf-8'))
+                encrypt_aes(challenge_string.encode()), user_pub
+                ).encode())
     
             data = await reader.read(1024)
-            response = data.decode('utf-8')
+            response = data.decode()
             if response == "OK":
                 client_sockets.add(writer)
                 authenticated_users[username] = writer
@@ -189,7 +189,7 @@ async def handle_client(reader, writer):
         else:
             print(f"[-] No such user as {username}." if user == None\
                    else f"[-] {cli_addr} tries to connect as {username}")
-            writer.write("failed".encode('utf-8'))
+            writer.write("failed".encode())
     conn.close()
 
 async def main():
