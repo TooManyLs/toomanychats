@@ -1,4 +1,5 @@
 import os
+from threading import Thread
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -22,7 +23,7 @@ from .utils.encryption import (
     pack_data,
     unpack_data,
     )
-from .utils.tools import generate_name, compress_image
+from .utils.tools import generate_name, compress_image, timer
 from .custom import TextArea
 from .components import (
     TextBubble, 
@@ -229,28 +230,36 @@ class ChatWidget(QWidget):
     def display_attach(self, files):
         for f, pic in files:
             if pic:
-                compressed = compress_image(f)
-                with open(compressed, "rb") as image:
-                    data = image.read()
-                    data, key = encrypt_aes(data)
-                    _, ext = os.path.splitext(compressed)
-                    data = (b"IMAGE:" + ext.encode() + b'<img>' + data, key)
-                    self._send_chunks(pack_data(data, self.server_pubkey))
-                img = SingleImage(compressed)
+                self.t = Thread(target=self._send_file, args=(f, True))
+                self.t.start()
+                img = SingleImage(f)
                 img.setFocusProxy(self.send_field)
                 self.layout.addWidget(img, alignment=Qt.AlignRight)
             else:
-                with open(f, "rb") as doc:
-                    data = doc.read()
-                    data, key = encrypt_aes(data)
-                    filename = os.path.basename(f)
-                    data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
-                    self._send_chunks(pack_data(data, self.server_pubkey))
+                self.t = Thread(target=self._send_file, args=(f, False))
+                self.t.start()
                 doc = DocAttachment(f)
                 doc.setFocusProxy(self.send_field)
                 self.layout.addWidget(doc, alignment=Qt.AlignRight)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
+
+    def _send_file(self, f, is_pic):
+        if is_pic:
+            compressed = compress_image(f)
+            with open(compressed, "rb") as image:
+                data = image.read()
+                data, key = encrypt_aes(data)
+                _, ext = os.path.splitext(compressed)
+                data = (b"IMAGE:" + ext.encode() + b'<img>' + data, key)
+                self._send_chunks(pack_data(data, self.server_pubkey))
+        else:
+            with open(f, "rb") as doc:
+                data = doc.read()
+                data, key = encrypt_aes(data)
+                filename = os.path.basename(f)
+                data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
+                self._send_chunks(pack_data(data, self.server_pubkey))
 
     def _send_chunks(self, data, chunk_size=65536):
         for i in range(0, len(data), chunk_size):
