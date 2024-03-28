@@ -1,5 +1,6 @@
 import os
 from threading import Thread
+from time import sleep
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -60,24 +61,28 @@ class Worker(QObject):
                 aes = self.my_cipher.decrypt(aes)
                 msg = decrypt_aes(data, aes)
                 self.message_received.emit(msg, header)
+            except ValueError:
+                continue
             except Exception:
                 break
         self.finished.emit()
-    
+
     def _receive_chunks(self, chunk_size=65536):
         chunks = []
         while True:
             chunk = self.s.recv(chunk_size)
             if chunk:
                 if b'-!-END-!-' in chunk:
-                    s_pos = chunk.find(b'-!-END-!-')
-                    e_pos = s_pos + 9
-                    chunks.append(chunk[:s_pos] + chunk[e_pos:])
+                    chunks.append(chunk)
                     break
+                elif len(chunks) > 0:
+                    if b'-!-END-!-' in b''.join((chunks[-1], chunk)):
+                        chunks.append(chunk)
+                        break
                 chunks.append(chunk)
             else:
                 return None
-        return b''.join(chunks)
+        return b''.join(chunks)[:-9]
 
 
 class ChatWidget(QWidget):
@@ -167,7 +172,7 @@ class ChatWidget(QWidget):
 
     @Slot(bytes, bytes)
     def on_message_received(self, msg, ext):
-        picture_type = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif")
+        picture_type = (".jpg", ".gif")
         ext = ext.decode()
         if ext and ext in picture_type:
             name = generate_name() + ext
@@ -241,6 +246,7 @@ class ChatWidget(QWidget):
                 doc = DocAttachment(f)
                 doc.setFocusProxy(self.send_field)
                 self.layout.addWidget(doc, alignment=Qt.AlignRight)
+            sleep(0.05)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
 

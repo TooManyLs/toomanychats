@@ -66,5 +66,8 @@ def pack_data(msg: tuple, pubkey) -> bytes:
 
 def unpack_data(msg: bytes):
     text, aes, pub = msg.split(b'<SEP>')
-    data: tuple = text, aes, RSA.import_key(pub)
-    return data
+    try:
+        data: tuple = text, aes, RSA.import_key(pub)
+        return data
+    except Exception:
+        pass

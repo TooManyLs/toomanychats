@@ -43,14 +43,16 @@ async def receive_chunks(reader, chunk_size=65536):
         chunk = await reader.read(chunk_size)
         if chunk:
             if b'-!-END-!-' in chunk:
-                s_pos = chunk.find(b'-!-END-!-')
-                e_pos = s_pos + 9
-                chunks.append(chunk[:s_pos] + chunk[e_pos:])
+                chunks.append(chunk)
                 break
+            elif len(chunks) > 0:
+                if b'-!-END-!-' in b''.join((chunks[-1], chunk)):
+                    chunks.append(chunk)
+                    break
             chunks.append(chunk)
         else:
             return None
-    return b''.join(chunks)
+    return b''.join(chunks)[:-9]
 
 async def listen_for_client(reader, writer, username):
     conn = db.connect(db_pass)
@@ -75,9 +77,11 @@ async def listen_for_client(reader, writer, username):
                     cli = authenticated_users[user]
                     cli.write(send_encrypted(msg, aes), pub).encode()
                     continue
-            except Exception:
+            except ValueError:
                 msg = data.decode()
                 await handle_command(msg, reader, writer, username)
+                continue
+            except TypeError:
                 continue
         except (OSError, ConnectionResetError):
             print("Socket is closed.")
