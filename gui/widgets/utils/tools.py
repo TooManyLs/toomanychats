@@ -3,6 +3,7 @@ import binascii
 from datetime import datetime
 import tempfile
 from functools import cache
+from time import perf_counter
 
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener, register_avif_opener
@@ -42,3 +43,12 @@ def compress_image(image_path: str, max_size: int=1280,
         img = img.convert("RGB")
         img.save(output_path, "JPEG", quality=90)
     return output_path
+
+def timer(func):
+    def wrapper(*args, **kwargs):
+        ts = perf_counter()
+        result = func(*args, **kwargs)
+        te = perf_counter()
+        print(f"{func.__name__} took {te - ts:.3f} seconds to execute.")
+        return result
+    return wrapper
