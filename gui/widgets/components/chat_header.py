@@ -1,3 +1,5 @@
+from typing import Callable
+
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtWidgets import (
     QFrame, 
@@ -21,19 +23,12 @@ class CustomMenu(QMenu):
         super().__init__(parent)
         self.setFixedWidth(150)
 
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
         self.layout.setSpacing(1)
-
-        self.code_btn = QPushButton("Your code")
-        self.logout_btn = QPushButton("Log out")
-        self.logout_btn.setObjectName("logout")
-
-        self.layout.addWidget(self.code_btn)
-        self.layout.addWidget(self.logout_btn)
-
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
 
         self.setStyleSheet(
             """
@@ -45,34 +40,37 @@ class CustomMenu(QMenu):
                 background-color: #2e2e2e;
             }
             QPushButton:hover{background-color: #3e3e3e;}
-            #logout:hover{background-color: #a03e3e;}
+            #danger:hover{background-color: #a03e3e;}
             """
             )
 
-        self.logout_btn.clicked.connect(self.log_out)
-        self.code_btn.clicked.connect(self.get_code)
-
-    def log_out(self):
-        parent = self.parent().parent().parent().parent()
-        if parent is None:
-            # for tests
-            parent = self.parent().parent().parent()
-        parent.initUI()
-
-    def get_code(self):
-        parent = self.parent().parent()
-        try:
-            parent.on_send("@get_code")
-        except AttributeError:
-            # for tests
-            pass
+    def add_action(self, text: str, action: Callable, *, 
+                   obj_name: str="", style: str="") -> None:
+        """
+Creates button and sets action on click.
+## Args:
+### text: 
+Text displayed on button.
+### action: 
+Method that runs when button is clicked.
+### obj_name:
+Sets object name to choose default style determined in CustomMenu class.
+- "danger" - button turns red on hover.
+### style:
+Sets custom stylesheet provided in QSS format.
+        """
+        self.btn = QPushButton(text)
+        self.btn.setObjectName(obj_name)
+        self.layout.addWidget(self.btn)
+        self.btn.clicked.connect(action)
+        if not obj_name:
+            self.btn.setStyleSheet(style)
 
     def showEvent(self, event):
         button = self.parent()
-        if button is not None:
-            pos = button.mapToGlobal(button.rect().bottomRight())
-            offset = QPoint(-self.width() - 8, 0)
-            self.move(pos + offset)
+        pos = button.mapToGlobal(button.rect().bottomRight())
+        offset = QPoint(-self.width() - 8, 0)
+        self.move(pos + offset)
 
         mask = QPixmap(self.size())
         mask.fill(Qt.transparent)
@@ -97,6 +95,8 @@ class ChatHeader(QFrame):
         
 
         self.menu = CustomMenu(self)
+        self.menu.add_action("Your code", self.get_code)
+        self.menu.add_action("Log out", self.log_out, obj_name="danger")
         self.options.setMenu(self.menu)
         self.options.setPopupMode(QToolButton.InstantPopup)
 
@@ -129,3 +129,19 @@ class ChatHeader(QFrame):
             }
             """
             )
+
+    def get_code(self):
+        parent = self.parent()
+        try:
+            parent.on_send("@get_code")
+        except AttributeError:
+            # for tests
+            pass
+        self.menu.close()
+
+    def log_out(self):
+        parent = self.parent().parent().parent()
+        if parent is None:
+            # for tests
+            parent = self.parent().parent()
+        parent.initUI()
