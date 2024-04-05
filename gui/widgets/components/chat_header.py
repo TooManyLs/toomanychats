@@ -20,6 +20,9 @@ from PySide6.QtGui import (
     QShortcut
     )
 
+from . import SingleImage, DocAttachment
+from ..utils.tools import secure_delete
+
 class CustomMenu(QMenu):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -119,8 +122,10 @@ class ChatHeader(QFrame):
 
         self.menu = CustomMenu(self)
         self.menu.add_action("Your code", self.get_code) 
+        self.menu.add_action("Clear chat", self.clear_chat)
         self.menu.add_action("Log out", self.log_out, obj_name="danger", 
                              shortcut="Ctrl+Q")
+
         self.options.setMenu(self.menu)
         self.options.setPopupMode(QToolButton.InstantPopup)
 
@@ -169,3 +174,19 @@ class ChatHeader(QFrame):
             # for tests
             parent = self.parent().parent()
         parent.initUI()
+
+    def clear_chat(self):
+        parent = self.parent().parent().parent()
+        if parent is None:
+            #for tests
+            parent = self.parent().parent()
+        widgets = parent.chat_area.children()[1:]
+        
+        for w in widgets:
+            if isinstance(w, SingleImage):
+                secure_delete(w.path)
+            elif isinstance(w, DocAttachment):
+                print('doc')
+            else:
+                print('bubble')
+            w.deleteLater()
