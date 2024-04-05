@@ -39,6 +39,7 @@ class CustomMenu(QMenu):
                 border: none;
                 border-radius: 0;
                 padding: 7px; 
+                padding-right: 75px;
                 background-color: #2e2e2e;
                 text-align: left;
             }
@@ -91,7 +92,7 @@ Binds key sequence to run an action that've been set to button.
         parent = self.parent()
         if hasattr(parent, "options"):
             pos = parent.mapToGlobal(parent.rect().bottomRight())
-            offset = QPoint(-self.width() - 8, 0)
+            offset = QPoint(-self.width() - 7, 0)
             self.move(pos + offset)
 
         mask = QPixmap(self.size())
@@ -127,7 +128,7 @@ class ChatHeader(QFrame):
                                         QSizePolicy.Policy.Fixed))
         self.layout.addWidget(self.title, alignment=Qt.AlignCenter)
         self.layout.addWidget(self.options)
-        self.layout.setContentsMargins(8,8,8,8)
+        self.layout.setContentsMargins(7,7,7,7)
 
         self.setStyleSheet(
             """

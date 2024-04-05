@@ -108,6 +108,7 @@ class ChatWidget(QWidget):
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)
+        main_layout.setSpacing(0)
 
         attach_icon = QIcon("./public/attach.png")
         self.attach = QPushButton(icon=attach_icon)
@@ -141,7 +142,7 @@ class ChatWidget(QWidget):
         self.button.setFocusProxy(self.send_field)
 
         input_layout = QHBoxLayout()
-        input_layout.setContentsMargins(8,0,8,7)
+        input_layout.setContentsMargins(7,7,7,7)
         input_layout.addWidget(self.attach)
         input_layout.addWidget(self.send_field)
         input_layout.addWidget(self.button)

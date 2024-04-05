@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         self.attach.clicked.connect(self.attach_file)
 
         input_layout = QHBoxLayout()
-        input_layout.setContentsMargins(8,0,8,7)
+        input_layout.setContentsMargins(7,7,7,7)
         input_layout.addWidget(self.attach)
         input_layout.addWidget(self.text_input)
         input_layout.addWidget(self.send_button)
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)
+        main_layout.setSpacing(0)
         main_layout.addWidget(self.header)
         main_layout.addWidget(self.scroll_area)
         main_layout.addLayout(input_layout)
