@@ -52,3 +52,12 @@ def timer(func):
         print(f"{func.__name__} took {te - ts:.3f} seconds to execute.")
         return result
     return wrapper
+
+def secure_delete(filepath: str, passes: int=5) -> None:
+    with open(filepath, "ba+") as f:
+        length = f.tell()
+    with open(filepath, "br+") as f:
+        for _ in range(passes):
+            f.seek(0)
+            f.write(os.urandom(length))
+    os.remove(filepath)
