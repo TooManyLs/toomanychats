@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
         input_layout.addWidget(self.send_button)
 
         self.header = ChatHeader()
+        self.header.reinit.connect(self.initUI)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)

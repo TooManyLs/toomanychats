@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
                                       self.s, self.server_pubkey)
 
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
+        self.main_widget.header.reinit.connect(self.initUI)
 
         self.stacked_layout.addWidget(self.enter_widget)    # 0
         self.stacked_layout.addWidget(self.sign_in)         # 1
