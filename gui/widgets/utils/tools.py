@@ -2,8 +2,9 @@ import os
 import binascii
 from datetime import datetime
 import tempfile
-from functools import cache
+from functools import wraps
 from time import perf_counter
+import shutil
 
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener, register_avif_opener
@@ -14,11 +15,27 @@ def generate_name() -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return f"{dust}_{timestamp}"
 
-@cache
+def cache_check(func):
+    cache = {}
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        key = (args, frozenset(kwargs.items()))
+        if key in cache:
+            output_path = cache[key]
+            if os.path.exists(output_path):
+                return output_path
+        result = func(*args, **kwargs)
+        cache[key] = result
+        return result
+    return wrapper
+
+@cache_check
 def compress_image(image_path: str, max_size: int=1280, 
                    *, gif_compression: bool=False, temp: bool=False) -> str:
     if image_path[-4:] == ".gif" and not gif_compression:
-        return image_path
+        path = f"./cache/img/{generate_name()}.gif"
+        shutil.copyfile(image_path, path)
+        return path
     
     if temp:
         output_path = tempfile.mktemp(suffix=".jpg")
