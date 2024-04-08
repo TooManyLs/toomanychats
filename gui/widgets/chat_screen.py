@@ -239,7 +239,7 @@ class ChatWidget(QWidget):
             if pic:
                 self.t = Thread(target=self._send_file, args=(f, True))
                 self.t.start()
-                img = SingleImage(f)
+                img = SingleImage(compress_image(f))
                 img.setFocusProxy(self.send_field)
                 self.layout.addWidget(img, alignment=Qt.AlignRight)
             else:

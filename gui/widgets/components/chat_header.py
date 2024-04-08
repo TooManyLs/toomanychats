@@ -27,9 +27,10 @@ class ChatHeader(QFrame):
 
         self.menu = CustomMenu(self)
         self.menu.add_action("Your code", self.get_code) 
-        self.menu.add_action("Clear chat", self.clear_chat, style="color: #e03e3e;")
-        self.menu.add_action("Log out", self.log_out, obj_name="danger", 
-                             shortcut="Ctrl+Q")
+        self.menu.add_action("Clear chat", self.clear_chat, 
+                             style="color: #e03e3e;")
+        self.menu.add_action("Log out", lambda: self.reinit.emit(), 
+                             obj_name="danger", shortcut="Ctrl+Q")
 
         self.options.setMenu(self.menu)
         self.options.setPopupMode(QToolButton.InstantPopup)
@@ -68,9 +69,6 @@ class ChatHeader(QFrame):
         self.getCode.emit("@get_code")
         self.menu.close()
 
-    def log_out(self):
-        self.reinit.emit()
-
     def clear_chat(self):
         parent = self.parent()
         try:
@@ -81,7 +79,10 @@ class ChatHeader(QFrame):
 
         for w in widgets:
             if isinstance(w, SingleImage):
-                secure_delete(w.path)
+                try:
+                    secure_delete(w.path)
+                except PermissionError:
+                    pass
             elif isinstance(w, DocAttachment):
                 print('doc')
             w.deleteLater()
