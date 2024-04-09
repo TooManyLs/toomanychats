@@ -1,22 +1,25 @@
 import os
 import subprocess
 import platform
+import shutil
 from datetime import datetime
 
 from PySide6.QtWidgets import (
     QVBoxLayout,  
     QSizePolicy,
     QLabel,
+    QFileDialog
     )
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QCursor, 
     QPainter,  
     QPixmap, 
     QImageReader, 
     QMovie, 
-    QPainterPath,
     )
+
+from .custom_menu import CustomMenu
 
 class SingleImage(QLabel):
     def __init__(self, path, *args, **kwargs):
@@ -101,3 +104,29 @@ class SingleImage(QLabel):
             self.layout.addWidget(self.time_text, 
                          alignment=Qt.AlignBottom | Qt.AlignRight)
         return super().resizeEvent(event)
+    
+    def contextMenuEvent(self, ev) -> None:
+        menu = CustomMenu(self)
+        menu.add_action("Save as", self.save_as)
+        menu.add_action("Show in Folder", self.show_in_folder)
+        menu.add_action("Delete", lambda:self.deleteLater(), 
+                        style="color: #e03e3e;")
+        menu.exec(ev.globalPos())
+
+    def save_as(self):
+        default = os.path.basename(self.path)
+        _, ext = os.path.splitext(default)
+        filters = {
+            ".jpg": "JPEG Image (*.jpg)",
+            ".gif": "GIF Image (*.gif)"
+                   }
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, "Save Image", default, 
+            filter=f"{filters[ext]};;All files (*.*)"
+            )
+        if file_name:
+            shutil.copy(self.path, file_name)
+    
+    def show_in_folder(self):
+        abspath = os.path.abspath(self.path)
+        subprocess.Popen(f'explorer /select,"{abspath}"')
