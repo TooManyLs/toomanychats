@@ -15,7 +15,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QCursor
 
-from widgets.components import TextBubble, SingleImage, ScrollArea, DocAttachment, AttachDialog, Overlay
+from widgets.components import (TextBubble, SingleImage, ScrollArea, 
+                                DocAttachment, AttachDialog, Overlay)
 from widgets.components.chat_header import ChatHeader
 from widgets.custom import TextArea
 from widgets.utils.tools import compress_image
@@ -123,8 +124,11 @@ More geese than swans now live, more fools than wise.""",
         self.attach.setFocusProxy(self.text_input)
         self.send_button.setFocusProxy(self.text_input)
         for o in self.chat_area.children():
-            if isinstance(o, QWidget):
+            if isinstance(o, QWidget) and not isinstance(o, TextBubble):
                 o.setFocusProxy(self.text_input)
+            elif isinstance(o, TextBubble):
+                o.sel = self.text_input
+                o.chat = self.chat_area
 
     def attach_file(self, files=None):
         if not files:

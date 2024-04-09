@@ -200,7 +200,8 @@ class ChatWidget(QWidget):
                 print("copied")
                 return
             bubble = TextBubble(msg, nametag)
-            bubble.setFocusProxy(self.send_field)
+            bubble.sel = self.send_field
+            bubble.chat = self.chat_area
             self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
 
     def on_send(self, to_send=""):
@@ -210,7 +211,8 @@ class ChatWidget(QWidget):
         to_send: str = self.send_field.toPlainText().strip()     
         if to_send:
             bubble = TextBubble(to_send)
-            bubble.setFocusProxy(self.send_field)
+            bubble.sel = self.send_field
+            bubble.chat = self.chat_area
             self.layout.addWidget(bubble, alignment=Qt.AlignRight)
             data_to_send = encrypt_aes((to_send + f"|{self.name}").encode())
             self._send_chunks(pack_data(data_to_send, self.server_pubkey))

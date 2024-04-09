@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QTextEdit, 
     QPushButton, 
     QSizePolicy,
+    QWidget
     )
 from PySide6.QtGui import (
     QFontMetrics, 
@@ -15,6 +16,9 @@ from PySide6.QtGui import (
     QCursor,
     )
 from PySide6.QtCore import Qt
+
+from .custom_menu import CustomMenu
+from ..custom import TextArea
 
 class TextBubble(QTextEdit):
     def __init__(self, text, name=None, *args, **kwargs):
@@ -51,6 +55,7 @@ class TextBubble(QTextEdit):
                     background-color: rgba(0,0,0,0); 
                     padding-top: 2px; 
                     padding-left: 1px;
+                    padding-bottom: 0px;
                     font-weight: 700;
                     border: none;
                     text-align: left;
@@ -59,6 +64,16 @@ class TextBubble(QTextEdit):
                 )
             layout.addWidget(self.name, alignment=Qt.AlignTop) 
         self.counter = 0 
+        self.sel: TextArea = None
+        self.chat: QWidget = None
+        self.selectionChanged.connect(self.selection_changed)
+
+    def selection_changed(self):
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            self.setFocus()
+        else:
+            self.sel.setFocus()
 
     def resizeEvent(self, e: QResizeEvent) -> None:
         while self.counter < 1:
@@ -90,12 +105,13 @@ class TextBubble(QTextEdit):
             text_height += 13
         self.setFixedHeight(text_height)
 
-    def focusOutEvent(self, event):
-        text_cursor = self.textCursor()
-        text_cursor.clearSelection()
-        self.setTextCursor(text_cursor)
-
-        super().focusOutEvent(event)
+    def focusInEvent(self, event) -> None:
+        for o in self.chat.children():
+            if isinstance(o, TextBubble) and o != self:
+                cursor = o.textCursor()
+                cursor.clearSelection()
+                o.setTextCursor(cursor) 
+        super().focusInEvent(event)
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -109,3 +125,25 @@ class TextBubble(QTextEdit):
         else:
             rect.setBottom(rect.bottom() - 3)
         painter.drawText(rect, Qt.AlignBottom | Qt.AlignRight, self.time_text)
+
+    def contextMenuEvent(self, ev) -> None:
+        self.menu = CustomMenu(self)
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            self.menu.add_action("Copy selected text", 
+                                 lambda:self.copy_text(False), 
+                                 shortcut="Ctrl+C")
+        else:
+            self.menu.add_action("Copy text", lambda:self.copy_text(True))
+        self.menu.add_action("Delete", lambda:self.deleteLater(), 
+                             style="color: #e03e3e")
+        self.menu.exec(ev.globalPos())
+
+    def copy_text(self, copy_all=True):
+        if copy_all:
+            self.selectAll()
+        self.copy()
+        cursor = self.textCursor()
+        cursor.clearSelection()
+        self.setTextCursor(cursor) 
+        self.menu.close()
