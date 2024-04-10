@@ -29,6 +29,7 @@ class ChatHeader(QFrame):
         self.menu.add_action("Your code", self.get_code) 
         self.menu.add_action("Clear chat", self.clear_chat, 
                              style="color: #e03e3e;")
+        self.menu.add_separator()
         self.menu.add_action("Log out", lambda: self.reinit.emit(), 
                              obj_name="danger", shortcut="Ctrl+Q")
 

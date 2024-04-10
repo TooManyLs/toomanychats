@@ -8,9 +8,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,  
     QSizePolicy,
     QLabel,
-    QFileDialog
+    QFileDialog,
+    QApplication
     )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtGui import (
     QCursor, 
     QPainter,  
@@ -106,12 +107,13 @@ class SingleImage(QLabel):
         return super().resizeEvent(event)
     
     def contextMenuEvent(self, ev) -> None:
-        menu = CustomMenu(self)
-        menu.add_action("Save as", self.save_as)
-        menu.add_action("Show in Folder", self.show_in_folder)
-        menu.add_action("Delete", lambda:self.deleteLater(), 
+        self.menu = CustomMenu(self)
+        self.menu.add_action("Save as", self.save_as)
+        self.menu.add_action("Copy Image", self.copy)
+        self.menu.add_action("Show in Folder", self.show_in_folder)
+        self.menu.add_action("Delete", lambda:self.deleteLater(), 
                         style="color: #e03e3e;")
-        menu.exec(ev.globalPos())
+        self.menu.exec(ev.globalPos())
 
     def save_as(self):
         default = os.path.basename(self.path)
@@ -126,6 +128,15 @@ class SingleImage(QLabel):
             )
         if file_name:
             shutil.copy(self.path, file_name)
+    
+    def copy(self):
+        clipboard = QApplication.clipboard()
+        mime = QMimeData()
+        path = os.path.abspath(self.path).replace("\\", "/")
+        path = "file:///" + path
+        mime.setUrls([path])
+        clipboard.setMimeData(mime)
+        self.menu.close()
     
     def show_in_folder(self):
         abspath = os.path.abspath(self.path)

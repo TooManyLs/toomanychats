@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, 
     QLabel, 
     QPushButton, 
-    QMenu
+    QMenu,
+    QSpacerItem
     )
 from PySide6.QtGui import (
     QPixmap,
@@ -25,11 +26,11 @@ class CustomMenu(QMenu):
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
-        self.layout.setSpacing(1)
+        self.layout.setSpacing(0)
 
         self.setStyleSheet(
             """
-            QMenu{background-color: #101010;}
+            QMenu{background-color: #161616;}
             QPushButton{
                 border: none;
                 border-radius: 0;
@@ -82,6 +83,9 @@ Binds key sequence to run an action that've been set to button.
             self.scut = QShortcut(QKeySequence(shortcut), self.parent())
             self.scut.setContext(Qt.ApplicationShortcut)
             self.scut.activated.connect(action)
+
+    def add_separator(self):
+        self.layout.addItem(QSpacerItem(0, 1))
 
     def showEvent(self, event):
         parent = self.parent()
