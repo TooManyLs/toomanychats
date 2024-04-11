@@ -24,9 +24,9 @@ class CustomMenu(QMenu):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
 
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0,0,0,0)
-        self.layout.setSpacing(0)
+        self.menu_layout = QVBoxLayout(self)
+        self.menu_layout.setContentsMargins(0,0,0,0)
+        self.menu_layout.setSpacing(0)
 
         self.setStyleSheet(
             """
@@ -40,13 +40,16 @@ class CustomMenu(QMenu):
                 text-align: left;
             }
             QPushButton:hover{background-color: #3e3e3e;}
+            QPushButton:disabled{color: #606060;}
             #danger:hover{background-color: #a03e3e;}
             """
             )
+        
+        self.h = 0
 
     def add_action(self, text: str, action: Callable, *, 
                    obj_name: str="", style: str="", 
-                   shortcut: str=None) -> None:
+                   shortcut: str=None, status: bool=True) -> None:
         """
 Creates button and sets action on click.
 ## Args:
@@ -61,11 +64,16 @@ Sets object name to choose default style from CustomMenu class.
 Sets custom stylesheet provided in QSS format.
 ### shortcut:
 Binds key sequence to run an action that've been set to button.
+### status:
+Disables/enables button depending on value(default: True - enabled).
         """
         self.btn = QPushButton(text)
+        self.h += 30
         self.btn.setObjectName(obj_name)
-        self.layout.addWidget(self.btn)
+        self.menu_layout.addWidget(self.btn)
         self.btn.clicked.connect(action)
+        self.btn.clicked.connect(self.close)
+        self.btn.setEnabled(status)
         if not obj_name:
             self.btn.setStyleSheet(style)
         
@@ -85,7 +93,8 @@ Binds key sequence to run an action that've been set to button.
             self.scut.activated.connect(action)
 
     def add_separator(self):
-        self.layout.addItem(QSpacerItem(0, 1))
+        self.menu_layout.addItem(QSpacerItem(0, 1))
+        self.h += 1
 
     def showEvent(self, event):
         parent = self.parent()
