@@ -2,6 +2,7 @@ import os
 import platform
 import subprocess
 from datetime import datetime
+import shutil
 
 from PySide6.QtWidgets import (
     QVBoxLayout, 
@@ -11,7 +12,9 @@ from PySide6.QtWidgets import (
     QPushButton, 
     QSizePolicy,
     QFrame,
-    QSpacerItem
+    QSpacerItem,
+    QFileDialog,
+    QApplication
     )
 from PySide6.QtGui import (
     QFontMetrics, 
@@ -19,8 +22,9 @@ from PySide6.QtGui import (
     QResizeEvent, 
     QCursor,
     )
-from PySide6.QtCore import Qt, QEvent
+from PySide6.QtCore import Qt, QEvent, QMimeData
 from .image_preview import ImagePreview
+from .custom_menu import CustomMenu
 
 picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg', 
                 '.pbm', '.pgm', '.png', '.ppm', '.tga', '.tif', '.tiff', 
@@ -71,7 +75,7 @@ class DocAttachment(QFrame):
         super().__init__(*args, **kwargs)
         self.time = datetime.now().strftime("%I:%M %p")
         _, ext = os.path.splitext(path)
-        filename = os.path.basename(path)
+        self.filename = os.path.basename(path)
         filesize = os.path.getsize(path)
         kb = filesize / 1024
         mb = kb / 1024
@@ -106,7 +110,7 @@ class DocAttachment(QFrame):
         info_layout.setSpacing(5)
         info_layout.setAlignment(Qt.AlignTop)
         info_layout.setContentsMargins(10,0,5,0)
-        self.name_text = EllipsisLabel(filename)
+        self.name_text = EllipsisLabel(self.filename)
         size_text = QLabel(filesize)
         size_text.setObjectName("secondary")
 
@@ -162,14 +166,55 @@ class DocAttachment(QFrame):
     
     def mouseReleaseEvent(self, ev):
         absolute_path = os.path.abspath(self.path)
-        if self.path.lower().endswith(picture_type):
-            if ev.button() == Qt.LeftButton:
+        if ev.button() == Qt.LeftButton:
+            if self.path.lower().endswith(picture_type):
                 if platform.system() == 'Windows':
                     os.startfile(absolute_path)
                 elif platform.system() == 'Darwin':  # macOS
                     subprocess.call(('open', absolute_path))
                 else:  # linux variants
                     subprocess.call(('xdg-open', absolute_path))
-        else:
-            subprocess.Popen(f'explorer /select,"{self.path}"')
+            else:
+                subprocess.Popen(f'explorer /select,"{self.path}"')
         return super().mouseReleaseEvent(ev)
+    
+    def contextMenuEvent(self, ev) -> None:
+        self.menu = CustomMenu(self)
+        self.menu.add_action("Save as", self.save_as)
+        self.menu.add_action("Copy Filename", self.copy_name)
+        self.menu.add_action("Show in Folder", self.show_in_folder)
+        self.menu.add_action("Delete", lambda:self.deleteLater(), 
+                        style="color: #e03e3e;")
+        self.menu.exec(ev.globalPos())
+
+    def save_as(self):
+        default = os.path.basename(self.path)
+        _, ext = os.path.splitext(default)
+        filters = {
+        '.png': 'PNG Image (*.png);;',
+        '.jpg': 'JPEG Image (*.jpg *.jpeg);;',
+        '.jpeg': 'JPEG Image (*.jpg *.jpeg);;',
+        '.bmp': 'Bitmap Image (*.bmp);;',
+        '.txt': 'Text File (*.txt);;',
+        '.doc': 'Word Document (*.doc *.docx);;',
+        '.docx': 'Word Document (*.doc *.docx);;',
+        '.torrent': 'BitTorrent seed file (*.torrent);;',
+        '.zip': 'Zip archive (*.zip, *.zipx);;',
+        '.zipx': 'Zip archive (*.zip, *.zipx);;',
+        }
+
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, "Save Image", default, 
+            filter=f"{filters.get(ext, '')}All files (*.*)"
+            )
+        if file_name:
+            shutil.copy(self.path, file_name)
+
+    def copy_name(self):
+        mime_data = QMimeData()
+        mime_data.setText(self.filename)
+        QApplication.clipboard().setMimeData(mime_data)
+
+    def show_in_folder(self):
+        absolute_path = os.path.abspath(self.path)
+        subprocess.Popen(f'explorer /select,"{absolute_path}"')
