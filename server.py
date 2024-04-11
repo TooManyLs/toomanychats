@@ -117,7 +117,7 @@ async def handle_command(cmd, reader, writer, username=None):
             reg_info = decrypt_aes(reg_info, aes).decode()
             name, passw, salt, pubkey = reg_info.split("|")
             if db.get_user(conn, name, "name") is None:
-                writer.write(f"[+] You've successfully created an account!"
+                writer.write("[+] You've successfully created an account!"
                              .encode())
                 f_codes[friend] = generate_sha256()
                 db.add_user(
@@ -191,7 +191,7 @@ async def handle_client(reader, writer):
             else:
                 print(f"[-] {username} failed to authenticate.")
         else:
-            print(f"[-] No such user as {username}." if user == None\
+            print(f"[-] No such user as {username}." if user is None\
                    else f"[-] {cli_addr} tries to connect as {username}")
             writer.write("failed".encode())
     conn.close()

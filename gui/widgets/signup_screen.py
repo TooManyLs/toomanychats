@@ -18,7 +18,7 @@ from .utils.encryption import (
     generate_key, 
     send_encrypted,
     )
-from .custom import TextField
+from .components import TextField
 
 class SignUp(QWidget):
     def __init__(self, stacked_layout, s, server_pubkey):

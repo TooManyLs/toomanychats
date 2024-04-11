@@ -25,7 +25,6 @@ from .utils.encryption import (
     unpack_data,
     )
 from .utils.tools import generate_name, compress_image, timer
-from .custom import TextArea
 from .components import (
     TextBubble, 
     SingleImage, 
@@ -33,6 +32,7 @@ from .components import (
     DocAttachment,
     AttachDialog,
     ChatHeader,
+    TextArea
     )
 
 class Worker(QObject):

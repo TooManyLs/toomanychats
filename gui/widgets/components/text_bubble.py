@@ -18,7 +18,7 @@ from PySide6.QtGui import (
 from PySide6.QtCore import Qt
 
 from .custom_menu import CustomMenu
-from ..custom import TextArea
+from .textarea import TextArea
 
 class TextBubble(QTextEdit):
     def __init__(self, text, name=None, *args, **kwargs):
@@ -145,5 +145,4 @@ class TextBubble(QTextEdit):
         self.copy()
         cursor = self.textCursor()
         cursor.clearSelection()
-        self.setTextCursor(cursor) 
-        self.menu.close()
+        self.setTextCursor(cursor)

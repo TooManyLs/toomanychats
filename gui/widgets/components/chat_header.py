@@ -74,7 +74,7 @@ class ChatHeader(QFrame):
         parent = self.parent()
         try:
             widgets = parent.chat_area.children()[1:]
-        except:
+        except AttributeError:
             # for tests
             widgets = parent.parent().chat_area.children()[1:]
 

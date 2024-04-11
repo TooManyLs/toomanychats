@@ -16,9 +16,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QCursor
 
 from widgets.components import (TextBubble, SingleImage, ScrollArea, 
-                                DocAttachment, AttachDialog, Overlay)
-from widgets.components.chat_header import ChatHeader
-from widgets.custom import TextArea
+                                DocAttachment, AttachDialog, Overlay,
+                                TextArea, ChatHeader)
 from widgets.utils.tools import compress_image
 
 class MainWindow(QMainWindow):
@@ -204,7 +203,7 @@ More geese than swans now live, more fools than wise.""",
         try:
             if self.dialog.isVisible():
                 return
-        except:
+        except AttributeError:
             pass
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():

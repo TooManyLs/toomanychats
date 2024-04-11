@@ -136,7 +136,6 @@ class SingleImage(QLabel):
         path = "file:///" + path
         mime.setUrls([path])
         clipboard.setMimeData(mime)
-        self.menu.close()
     
     def show_in_folder(self):
         abspath = os.path.abspath(self.path)

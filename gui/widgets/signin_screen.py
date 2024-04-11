@@ -13,13 +13,11 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
 from .utils.encryption import (
-    encrypt_aes, 
     decrypt_aes, 
     generate_key, 
-    send_encrypted,
     recv_encrypted
     )
-from .custom import TextField
+from .components import TextField
 
 class SignIn(QWidget):
     name_signal = Signal(str)

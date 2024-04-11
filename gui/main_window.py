@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
         try:
             if self.main_widget.dialog.isVisible():
                 return
-        except:
+        except AttributeError:
             pass
         if event.mimeData().hasUrls() and self.stacked_layout.currentIndex() == 3:
             for url in event.mimeData().urls():
