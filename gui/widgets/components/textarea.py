@@ -2,7 +2,9 @@ import os
 
 from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPoint
+
+from .custom_menu import CustomMenu
 
 class TextArea(QTextEdit):
     def __init__(self, *args, **kwargs):
@@ -57,3 +59,27 @@ class TextArea(QTextEdit):
             e.ignore()
             return
         return super().dragEnterEvent(e)
+    
+    def contextMenuEvent(self, e) -> None:
+        selection = self.textCursor().hasSelection()
+        can_undo = self.document().isUndoAvailable()
+        can_redo = self.document().isRedoAvailable()
+
+        self.menu = CustomMenu(self)
+        self.menu.add_action("Undo", self.undo, shortcut="Ctrl+Z",
+                             status=can_undo)
+        self.menu.add_action("Redo", self.redo, shortcut="Ctrl+Y",
+                             status=can_redo)
+        self.menu.add_separator()
+        self.menu.add_action("Cut", self.cut, shortcut="Ctrl+X", 
+                             status=selection)
+        self.menu.add_action("Copy", self.copy, shortcut="Ctrl+C",
+                             status=selection)
+        self.menu.add_action("Paste", self.paste, shortcut="Ctrl+V",
+                             status=self.canPaste())
+        self.menu.add_action("Delete", self.textCursor().deleteChar,
+                             status=selection)
+        self.menu.add_separator()
+        self.menu.add_action("Select all", self.selectAll, shortcut="Ctrl+A",
+                             status=bool(self.toPlainText()))
+        self.menu.exec(e.globalPos() + QPoint(0, -self.menu.h))
