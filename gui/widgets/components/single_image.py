@@ -11,34 +11,40 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QApplication
     )
-from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QCursor, 
     QPainter,  
     QPixmap, 
     QImageReader, 
-    QMovie, 
+    QMovie,
     )
 
 from .custom_menu import CustomMenu
+from ..utils.tools import compress_image, generate_name
 
 class SingleImage(QLabel):
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, path="", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.path = path
-        if path[-4:] == ".gif":
-            mov = QMovie(path)
-            self.setMovie(mov)
-            mov.start()
-            self._pixmap = mov
+        if not path:
+            self.image = compress_image()
+            self._pixmap = QPixmap.fromImage(self.image)
+            self.setPixmap(self._pixmap)
         else:
-            image_reader = QImageReader(path)
-            image_reader.setAutoTransform(True)
-            image = image_reader.read()
+            if path[-4:] == ".gif":
+                mov = QMovie(path)
+                self.setMovie(mov)
+                mov.start()
+                self._pixmap = mov
+            else:
+                image_reader = QImageReader(path)
+                image_reader.setAutoTransform(True)
+                image = image_reader.read()
 
-            pixmap = QPixmap.fromImage(image)
-            self.setPixmap(pixmap)
-            self._pixmap = pixmap
+                pixmap = QPixmap.fromImage(image)
+                self.setPixmap(pixmap)
+                self._pixmap = pixmap
         self._resized = False
         self.setScaledContents(True)
         self.setCursor(QCursor(Qt.PointingHandCursor))
@@ -58,10 +64,17 @@ class SingleImage(QLabel):
         
         self.counter = 0
 
+    def check_path(self):
+        if not self.path:
+            self.path = f"./cache/img/{generate_name()}.jpg"
+            self._pixmap.save(self.path)
+
     def mouseReleaseEvent(self, ev):
-        absolute_path = os.path.abspath(self.path)
-        
+    
         if ev.button() == Qt.LeftButton:
+            self.check_path()
+            absolute_path = os.path.abspath(self.path)
+
             if platform.system() == 'Windows':
                 os.startfile(absolute_path)
             elif platform.system() == 'Darwin':  # macOS
@@ -110,13 +123,17 @@ class SingleImage(QLabel):
         self.menu = CustomMenu(self)
         self.menu.add_action("Save as", self.save_as)
         self.menu.add_action("Copy Image", self.copy)
-        self.menu.add_action("Show in Folder", self.show_in_folder)
+        self.menu.add_action("Show in Folder", self.show_in_folder, 
+                             status=bool(self.path))
         self.menu.add_action("Delete", lambda:self.deleteLater(), 
                         style="color: #e03e3e;")
         self.menu.exec(ev.globalPos())
 
     def save_as(self):
-        default = os.path.basename(self.path)
+        if self.path:
+            default = os.path.basename(self.path)
+        else:
+            default = generate_name() + ".jpg"
         _, ext = os.path.splitext(default)
         filters = {
             ".jpg": "JPEG Image (*.jpg)",
@@ -127,15 +144,18 @@ class SingleImage(QLabel):
             filter=f"{filters[ext]};;All files (*.*)"
             )
         if file_name:
-            shutil.copy(self.path, file_name)
+            if self.path:
+                shutil.copy(self.path, file_name)
+            else:
+                self._pixmap.save(file_name)
+                self.path = file_name
     
     def copy(self):
         clipboard = QApplication.clipboard()
-        mime = QMimeData()
-        path = os.path.abspath(self.path).replace("\\", "/")
-        path = "file:///" + path
-        mime.setUrls([path])
-        clipboard.setMimeData(mime)
+        image = QPixmap.toImage(self._pixmap.currentPixmap()
+                                if self.path.endswith(".gif") and self.path 
+                                else self._pixmap)
+        clipboard.setImage(image)
     
     def show_in_folder(self):
         abspath = os.path.abspath(self.path)
