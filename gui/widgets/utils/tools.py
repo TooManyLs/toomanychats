@@ -5,9 +5,13 @@ import tempfile
 from functools import wraps
 from time import perf_counter
 import shutil
+from io import BytesIO
 
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener, register_avif_opener
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QImage
+from PySide6.QtCore import QBuffer
 
 def generate_name() -> str:
     """Generates random name with timestamp"""
@@ -30,21 +34,27 @@ def cache_check(func):
     return wrapper
 
 @cache_check
-def compress_image(image_path: str, max_size: int=1280, 
-                   *, gif_compression: bool=False, temp: bool=False) -> str:
+def compress_image(image_path: str="", max_size: int=1280, 
+                   *, gif_compression: bool=False, temp: bool=False) -> str | QImage:
     if image_path[-4:] == ".gif" and not gif_compression:
         path = f"./cache/img/{generate_name()}.gif"
         shutil.copyfile(image_path, path)
         return path
-    
+    if not image_path:
+        clipboard = QApplication.clipboard()
+        img = clipboard.image()
+
+        buffer = QBuffer()
+        buffer.open(QBuffer.ReadWrite)
+        img.save(buffer, "JPEG")
     if temp:
-        output_path = tempfile.mktemp(suffix=".jpg")
+        _, output_path = tempfile.mkstemp(suffix=".jpg")
     else:
         output_path = f"./cache/img/{generate_name()}.jpg"
 
     register_heif_opener()
     register_avif_opener()
-    with Image.open(image_path) as img:
+    with Image.open(image_path if image_path else BytesIO(buffer.data())) as img:
         img = ImageOps.exif_transpose(img)
         width, height = img.size
         max_dim = max(width, height)
@@ -58,7 +68,15 @@ def compress_image(image_path: str, max_size: int=1280,
             img = img.resize((new_width, new_height), Image.LANCZOS)
 
         img = img.convert("RGB")
-        img.save(output_path, "JPEG", quality=90)
+        if image_path:
+            img.save(output_path, "JPEG", quality=90)
+        else:
+            byte_arr = BytesIO()
+            img.save(byte_arr, format='JPEG', quality=90)
+            byte_arr = byte_arr.getvalue()
+            compressed_qimage = QImage.fromData(byte_arr, "JPEG")
+            return compressed_qimage
+
     return output_path
 
 def timer(func):
