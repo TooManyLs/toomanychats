@@ -88,7 +88,7 @@ def timer(func):
         return result
     return wrapper
 
-def secure_delete(filepath: str, passes: int=5) -> None:
+def secure_delete(filepath: str, passes: int=10) -> None:
     with open(filepath, "ba+") as f:
         length = f.tell()
     with open(filepath, "br+") as f:
