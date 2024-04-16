@@ -86,6 +86,11 @@ class MainWindow(QMainWindow):
     
     def dragEnterEvent(self, event):
         try:
+            if event.source().window() is self:
+                return
+        except AttributeError:
+            pass
+        try:
             if self.main_widget.dialog.isVisible():
                 return
         except AttributeError:

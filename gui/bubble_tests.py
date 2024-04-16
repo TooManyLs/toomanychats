@@ -97,8 +97,10 @@ More geese than swans now live, more fools than wise.""",
         )
         compressed = compress_image("E:/Dloads/monke1.jpg")
         img = SingleImage(compressed)
+        img2 = SingleImage()
         doc = DocAttachment("E:/Dloads/3621c770122a7ff74f78cd1ff9ea0bc0.jpg")
         self.layout.addWidget(img, alignment=Qt.AlignRight)
+        self.layout.addWidget(img2, alignment=Qt.AlignRight)
         self.layout.addWidget(dft, alignment=Qt.AlignLeft)
         self.layout.addWidget(dft3, alignment=Qt.AlignRight)
         self.layout.addWidget(dft2, alignment=Qt.AlignLeft)
@@ -200,6 +202,11 @@ More geese than swans now live, more fools than wise.""",
         event.accept()
 
     def dragEnterEvent(self, event):
+        try:
+            if event.source().window() is self:
+                return
+        except AttributeError:
+            pass
         try:
             if self.dialog.isVisible():
                 return

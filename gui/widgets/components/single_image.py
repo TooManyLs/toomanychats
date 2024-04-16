@@ -3,6 +3,7 @@ import subprocess
 import platform
 import shutil
 from datetime import datetime
+import tempfile
 
 from PySide6.QtWidgets import (
     QVBoxLayout,  
@@ -11,13 +12,14 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QApplication
     )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QMimeData, QUrl, QPoint
 from PySide6.QtGui import (
     QCursor, 
     QPainter,  
     QPixmap, 
     QImageReader, 
     QMovie,
+    QDrag
     )
 
 from .custom_menu import CustomMenu
@@ -26,6 +28,7 @@ from ..utils.tools import compress_image, generate_name
 class SingleImage(QLabel):
     def __init__(self, path="", *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.temp_file = None
         self.path = path
         if not path:
             self.image = compress_image()
@@ -69,7 +72,41 @@ class SingleImage(QLabel):
             self.path = f"./cache/img/{generate_name()}.jpg"
             self._pixmap.save(self.path)
 
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.drag_start_position = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.LeftButton):
+            return
+        if (event.pos() - self.drag_start_position).manhattanLength() < QApplication.startDragDistance():
+            return
+        drag = QDrag(self)
+        mime_data = QMimeData()
+
+        if not os.path.exists(self.path):
+            self.temp_file = tempfile.NamedTemporaryFile(delete=False, delete_on_close=True, suffix=".jpg")
+            self._pixmap.save(self.temp_file.name, "JPEG")
+            self.path = self.temp_file.name
+        else:
+            self.path = os.path.abspath(self.path)
+
+        mime_data.setUrls([QUrl.fromLocalFile(self.path)])
+
+        scaled_pixmap = self.pixmap().scaled(
+            128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+        drag.setMimeData(mime_data)
+        drag.setPixmap(scaled_pixmap)
+        hotspot = QPoint(scaled_pixmap.width() * 1.5, scaled_pixmap.height())
+        drag.setHotSpot(hotspot - QPoint(scaled_pixmap.width(), scaled_pixmap.height() * 0.5))
+        drag.exec_(Qt.CopyAction | Qt.MoveAction)
+
     def mouseReleaseEvent(self, ev):
+        if self.temp_file:
+            self.temp_file.close()
+            self.temp_file = None
+            self.path = ""
     
         if ev.button() == Qt.LeftButton:
             self.check_path()
