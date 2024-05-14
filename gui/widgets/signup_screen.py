@@ -190,10 +190,12 @@ class SignUp(QWidget):
             rsa_keys = RSA.generate(2048)
             pubkey = rsa_keys.public_key().export_key()
             pvtkey = rsa_keys.export_key()
-            data = encrypt_aes(f"{name}|{b64encode(hash).decode('utf-8')}|"
+
+            data = encrypt_aes((f"{name}|{b64encode(hash).decode('utf-8')}|"
                                + f"{b64encode(salt).decode('utf-8')}|"
-                               + f"{pubkey.decode('utf-8')}"
+                               + f"{pubkey.decode('utf-8')}")
                                 .encode('utf-8'))
+            
             self.s.send(send_encrypted(data, self.server_pubkey)
                         .encode('utf-8'))
             ok = self.s.recv(1024).decode('utf-8')
