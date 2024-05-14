@@ -17,12 +17,13 @@ from PySide6.QtGui import (
     )
 
 class CustomMenu(QMenu):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, offset=False):
         super().__init__(parent)
         self.setFixedWidth(200)
+        self.offset = offset
 
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup | Qt.NoDropShadowWindowHint)
 
         self.menu_layout = QVBoxLayout(self)
         self.menu_layout.setContentsMargins(0,0,0,0)
@@ -30,25 +31,25 @@ class CustomMenu(QMenu):
 
         self.setStyleSheet(
             """
-            QMenu{background-color: #161616;}
+            QMenu{background-color: rgba(0,0,0,0);}
             QPushButton{
                 border: none;
                 border-radius: 0;
                 padding: 7px; 
-                padding-right: 75px;
-                background-color: #2e2e2e;
+                background-color: #3e3e3e;
                 text-align: left;
+                color: white;
             }
-            QPushButton:hover{background-color: #3e3e3e;}
-            QPushButton:disabled{color: #606060;}
+            QPushButton:hover{background-color: #4e4e4e;}
+            QPushButton:disabled{color: #6e6e6e;}
             #danger:hover{background-color: #a03e3e;}
             """
             )
         
         self.h = 0
 
-    def add_action(self, text: str, action: Callable, *, 
-                   obj_name: str="", style: str="", 
+    def add_action(self, text: str, action: Callable=None, *, 
+                   obj_name: str=None, style: str=None, 
                    shortcut: str=None, status: bool=True) -> None:
         """
 Creates button and sets action on click.
@@ -78,7 +79,7 @@ Disables/enables button depending on value(default: True - enabled).
             self.btn.setStyleSheet(style)
         
         layout = QHBoxLayout(self.btn)
-        if shortcut: 
+        if shortcut:
             sc_label = QLabel(shortcut)
             sc_label.setStyleSheet(
                 """
@@ -93,14 +94,19 @@ Disables/enables button depending on value(default: True - enabled).
             self.scut.activated.connect(action)
 
     def add_separator(self):
-        self.menu_layout.addItem(QSpacerItem(0, 1))
-        self.h += 1
+        spacer_height = 2
+        self.menu_layout.addItem(QSpacerItem(0, spacer_height))
+        self.h += spacer_height
 
     def showEvent(self, event):
         parent = self.parent()
         if hasattr(parent, "options"):
             pos = parent.mapToGlobal(parent.rect().bottomRight())
             offset = QPoint(-self.width() - 7, 0)
+            self.move(pos + offset)
+        elif self.offset: 
+            pos = self.window().mapToParent(self.window().rect().topRight())
+            offset = QPoint(-self.width() - 170, 0)
             self.move(pos + offset)
 
         mask = QPixmap(self.size())
