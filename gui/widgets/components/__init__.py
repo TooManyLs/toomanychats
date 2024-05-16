@@ -7,3 +7,4 @@ from .chat_header import ChatHeader
 from .custom_menu import CustomMenu
 from .textarea import TextArea
 from .textfield import TextField
+from .server_dialog import ServerDialog
