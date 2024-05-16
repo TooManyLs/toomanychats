@@ -1,4 +1,5 @@
 from configparser import ConfigParser
+import os
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -6,11 +7,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QToolButton,
+    QMainWindow,
+    QDialog,
     )
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, Signal
 
-from .components import CustomMenu
+from .components import CustomMenu, ServerDialog
 
 class EnterWidget(QWidget):
     reinit = Signal()
@@ -33,6 +36,7 @@ class EnterWidget(QWidget):
         self.config = ConfigParser()
         self.config.read("./gui/config.ini")
 
+        self.servernames = []
         for server in self.config.sections():
             host = self.config.get(server, "host")
             port = self.config.getint(server, "port")
@@ -43,10 +47,11 @@ class EnterWidget(QWidget):
                 continue
             
             addr = f"{host}:{port} ({server})"
+            self.servernames.append(server)
 
             self.menu.add_action(addr, lambda: self.change_server(host, port))
 
-        self.menu.add_action("Connect to...")
+        self.menu.add_action("Connect to...", self.connect_to)
         self.options.setMenu(self.menu)
         self.options.setPopupMode(QToolButton.InstantPopup)
 
@@ -126,3 +131,39 @@ class EnterWidget(QWidget):
             self.config.write(cfg)
 
         self.reinit.emit()
+
+    def connect_to(self):
+        self.dialog = ServerDialog(server_list=self.servernames ,parent=self)
+        self.window().overlay.show()
+        parent_geometry = self.window().geometry()
+        self.dialog.move(
+            parent_geometry.center() - self.dialog.rect().center())
+        self.dialog.exec()
+
+    def _on_dialog_finished(self, result, info=[], add=False):
+        self.dialog.hide()
+        self.window().overlay.hide()
+
+        if result == QDialog.Rejected:
+            return
+        
+        addr, new_server = info
+        host, port = addr.split(":")
+        if add:
+            if not new_server:
+                new_server = str(os.urandom(6))
+            self.config.add_section(new_server)
+            self.config.set(new_server, "host", host)
+            self.config.set(new_server, "port", port)
+
+            with open("./gui/config.ini", "w") as cfg:
+                self.config.write(cfg)
+        
+        self.change_server(host, port)
+
+
+
+    def showEvent(self, event) -> None:
+        if isinstance(self.window(), QMainWindow):
+            self.window().overlay.raise_()
+        
