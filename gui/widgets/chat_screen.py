@@ -68,21 +68,17 @@ class Worker(QObject):
         self.finished.emit()
 
     def _receive_chunks(self, chunk_size=65536):
+        data_length = int.from_bytes(self.s.recv(4), 'big')
         chunks = []
-        while True:
-            chunk = self.s.recv(chunk_size)
+        bytes_read = 0
+        while bytes_read < data_length:
+            chunk = self.s.recv(min(chunk_size, data_length - bytes_read))
             if chunk:
-                if b'-!-END-!-' in chunk:
-                    chunks.append(chunk)
-                    break
-                elif len(chunks) > 0:
-                    if b'-!-END-!-' in b''.join((chunks[-1], chunk)):
-                        chunks.append(chunk)
-                        break
                 chunks.append(chunk)
+                bytes_read += len(chunk)
             else:
                 return None
-        return b''.join(chunks)[:-9]
+        return b''.join(chunks)
 
 
 class ChatWidget(QWidget):
@@ -206,7 +202,7 @@ class ChatWidget(QWidget):
 
     def on_send(self, to_send=""):
         if to_send == "@get_code":
-            self.s.send("/code".encode() + b'-!-END-!-')
+            self.s.send("code".encode())
             return
         to_send: str = self.send_field.toPlainText().strip()     
         if to_send:
@@ -272,10 +268,10 @@ class ChatWidget(QWidget):
                 self._send_chunks(pack_data(data, self.server_pubkey))
 
     def _send_chunks(self, data, chunk_size=65536):
+        self.s.sendall(len(data).to_bytes(4, 'big'))
         for i in range(0, len(data), chunk_size):
             chunk = data[i:i+chunk_size]
-            self.s.send(chunk)
-        self.s.send(b'-!-END-!-')
+            self.s.sendall(chunk)
 
     def scroll_down(self):
         scrollbar = self.scroll_area.verticalScrollBar()

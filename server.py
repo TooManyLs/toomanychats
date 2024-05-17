@@ -30,29 +30,28 @@ client_sockets = set()
 authenticated_users = {}
 
 async def send_chunks(writer, data: bytes, chunk_size=65536):
+    writer.write(len(data).to_bytes(4, 'big'))
+    await writer.drain()
     for i in range(0, len(data), chunk_size):
         chunk = data[i:i+chunk_size]
         writer.write(chunk)
         await writer.drain()
-    writer.write(b'-!-END-!-')
-    await writer.drain()
 
 async def receive_chunks(reader, chunk_size=65536):
+    data_length_bytes = await reader.readexactly(4)
+    if data_length_bytes == b'code':
+        return b'/code'
+    data_length = int.from_bytes(data_length_bytes, 'big')
     chunks = []
-    while True:
-        chunk = await reader.read(chunk_size)
+    bytes_read = 0
+    while bytes_read < data_length:
+        chunk = await reader.read(min(chunk_size, data_length - bytes_read))
         if chunk:
-            if b'-!-END-!-' in chunk:
-                chunks.append(chunk)
-                break
-            elif len(chunks) > 0:
-                if b'-!-END-!-' in b''.join((chunks[-1], chunk)):
-                    chunks.append(chunk)
-                    break
             chunks.append(chunk)
+            bytes_read += len(chunk)
         else:
-            return None
-    return b''.join(chunks)[:-9]
+            raise RuntimeError("Socket connection broken")
+    return b''.join(chunks)
 
 async def listen_for_client(reader, writer, username):
     conn = db.connect(db_pass)
