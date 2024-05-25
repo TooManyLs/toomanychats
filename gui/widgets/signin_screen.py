@@ -66,6 +66,8 @@ class SignIn(QWidget):
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(2, 1)
+        layout.setColumnMinimumWidth(1, 300)
+
         layout.setRowStretch(0, 1)
         layout.setRowStretch(2, 1)
 
@@ -104,6 +106,9 @@ class SignIn(QWidget):
             """
             )
         self.fields = self.findChildren(TextField)
+
+        for w in self.fields:
+            w.setMaximumWidth(400)
 
         self.btn.clicked.connect(self.sign_in)
         self.reg.clicked.connect(self.sign_up)

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QFrame
     )
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV, QIcon
-from PySide6.QtCore import QRegularExpression as Q_re
+from PySide6.QtCore import QRegularExpression as Q_re, Qt
 from Crypto.PublicKey import RSA
 
 from .utils.encryption import (
@@ -28,16 +28,13 @@ class SignUp(QWidget):
         self.server_pubkey = server_pubkey
 
         self.main_layout = QGridLayout()
-        self.back = QGridLayout()
+        self.back = QVBoxLayout()
         self.back_btn = QPushButton()
         self.back_btn.setIcon(QIcon("./public/arrow.png"))
-        self.back.addWidget(self.back_btn, 0, 0)
-        self.back.setColumnStretch(0, 1)
-        self.back.setColumnStretch(1, 2)
-        self.back.setColumnStretch(2, 1)
-        self.back.setRowStretch(0, 1)
-        self.back.setRowStretch(2, 2)
+        self.back_btn.setFixedSize(30, 30)
         self.back_btn.setObjectName("back")
+        
+        self.back.addWidget(self.back_btn, alignment=Qt.AlignLeft | Qt.AlignTop)
 
         self.friend_code = TextField("Friend code:", "#2e2e2e")
         self.friend_name = TextField("Friend username:", "#2e2e2e")
@@ -103,6 +100,8 @@ class SignUp(QWidget):
         self.main_layout.setColumnStretch(0, 1)
         self.main_layout.setColumnStretch(1, 1)
         self.main_layout.setColumnStretch(2, 1)
+        self.main_layout.setColumnMinimumWidth(1, 300)
+
         self.main_layout.setRowStretch(0, 1)
         self.main_layout.setRowStretch(2, 1)
 
@@ -143,6 +142,9 @@ class SignUp(QWidget):
             """
             )
         self.fields = self.findChildren(TextField)
+
+        self.code_frame.setMaximumWidth(400)
+        self.form_frame.setMaximumWidth(400)
         
         self.btn.clicked.connect(self.signup)
         self.check_btn.clicked.connect(self.check_code)

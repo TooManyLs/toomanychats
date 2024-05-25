@@ -18,7 +18,7 @@ class ServerDialog(QDialog):
         self.server_list = server_list
         self.setWindowFlag(Qt.FramelessWindowHint, True)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setGeometry(0, 0, 350, 200)
+        self.setGeometry(0, 0, 370, 200)
 
         main = QVBoxLayout(self)
         main.setSpacing(10)
@@ -37,7 +37,7 @@ class ServerDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
         self.cancel = QPushButton("Cancel")
-        self.add = QPushButton("Add & connect")
+        self.add = QPushButton("Add && connect")
         self.conn = QPushButton("Connect")
         self.cancel.setFixedWidth(110)
         self.add.setFixedWidth(110)

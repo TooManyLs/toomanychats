@@ -60,6 +60,9 @@ class EnterWidget(QWidget):
         buttons.addSpacing(20)
         buttons.addWidget(self.sign_up_button)
 
+        self.sign_in_button.setMaximumWidth(400)
+        self.sign_up_button.setMaximumWidth(400)
+
         option = QVBoxLayout()
         option.addWidget(self.options, alignment=Qt.AlignTop | Qt.AlignRight)
         
@@ -69,6 +72,8 @@ class EnterWidget(QWidget):
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(2, 1)
+        layout.setColumnMinimumWidth(1, 300)
+
         layout.setRowStretch(0, 1)
         layout.setRowStretch(2, 1)
 
