@@ -3,3 +3,4 @@ pillow-heif
 psycopg2
 pycryptodome
 pyside6
+cryptography
