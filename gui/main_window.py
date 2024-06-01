@@ -2,6 +2,7 @@ import os
 import sys
 import atexit
 import socket
+import ssl
 from configparser import ConfigParser
 
 from PySide6.QtGui import QPalette, QColor
@@ -39,7 +40,12 @@ class MainWindow(QMainWindow):
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
         
-        self.s = socket.socket()
+        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        context.load_verify_locations(cafile="./ssl/cert.pem")
+
+        s = socket.socket()
+        self.s = context.wrap_socket(s, server_hostname="toomanychats")
+
         print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
         self.s.connect((SERVER_HOST, SERVER_PORT))
         self.server_pubkey = RSA.import_key(self.s.recv(1024))

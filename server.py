@@ -1,6 +1,7 @@
 import asyncio
 import socket
 from base64 import b64encode, b64decode
+import ssl
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
@@ -191,13 +192,18 @@ async def handle_client(reader, writer):
                 writer.write("failed".encode())
 
 async def main():
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(certfile='ssl/cert.pem', 
+                                keyfile='ssl/private_key.pem')   
+
     server = await asyncio.start_server(
         handle_client, SERVER_HOST, SERVER_PORT,
         family=socket.AF_INET, 
-        reuse_address=True)
+        reuse_address=True,
+        ssl=ssl_context)
 
     addr = server.sockets[0].getsockname()
-    print(f"[*] Listening on {addr}")
+    print(f"[*] Listening on {addr}", ssl_context.protocol)
 
     async with server:
         await server.serve_forever()
