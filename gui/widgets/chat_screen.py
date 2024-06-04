@@ -61,6 +61,7 @@ class Worker(QObject):
                 aes = self.my_cipher.decrypt(aes)
                 msg = decrypt_aes(data, aes)
                 self.message_received.emit(msg, header)
+                del msg, data, aes, pub, header
             except ValueError:
                 continue
             except Exception:
@@ -97,9 +98,9 @@ class ChatWidget(QWidget):
         self.chat_area.setObjectName("scrollarea")
         self.scroll_area.setWidget(self.chat_area)
 
-        self.layout = QVBoxLayout(self.chat_area)
-        self.layout.setSpacing(5)
-        self.layout.addItem(
+        self.chat_layout = QVBoxLayout(self.chat_area)
+        self.chat_layout.setSpacing(5)
+        self.chat_layout.addItem(
             QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         main_layout = QVBoxLayout()
@@ -110,6 +111,8 @@ class ChatWidget(QWidget):
         self.attach = QPushButton(icon=attach_icon)
         self.button = QPushButton("Send")
         self.send_field = TextArea()
+        self.send_field.attach.connect(self.attach_file)
+        self.send_field.send.connect(self.on_send)
         self.send_field.setPlaceholderText("Write a message...")
         self.send_field.setObjectName("tarea")
         self.attach.setCursor(QCursor(Qt.PointingHandCursor))
@@ -178,13 +181,13 @@ class ChatWidget(QWidget):
                 image.write(msg)
             img = SingleImage(f"./cache/img/{name}")
             img.setFocusProxy(self.send_field)
-            self.layout.addWidget(img, alignment=Qt.AlignLeft)
+            self.chat_layout.addWidget(img, alignment=Qt.AlignLeft)
         elif ext and ext not in picture_type:
             with open(f"./cache/attachments/{ext}", "wb") as doc:
                 doc.write(msg)
             doc = DocAttachment(f"./cache/attachments/{ext}")
             doc.setFocusProxy(self.send_field)
-            self.layout.addWidget(doc, alignment=Qt.AlignLeft)
+            self.chat_layout.addWidget(doc, alignment=Qt.AlignLeft)
         else:
             msg = msg.decode()
             try:
@@ -198,10 +201,10 @@ class ChatWidget(QWidget):
             bubble = TextBubble(msg, nametag)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
-            self.layout.addWidget(bubble, alignment=Qt.AlignLeft)
+            self.chat_layout.addWidget(bubble, alignment=Qt.AlignLeft)
 
-    def on_send(self, to_send=""):
-        if to_send == "@get_code":
+    def on_send(self, cmd=""):
+        if cmd == "@get_code":
             self.s.send("code".encode())
             return
         to_send: str = self.send_field.toPlainText().strip()     
@@ -209,7 +212,7 @@ class ChatWidget(QWidget):
             bubble = TextBubble(to_send)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
-            self.layout.addWidget(bubble, alignment=Qt.AlignRight)
+            self.chat_layout.addWidget(bubble, alignment=Qt.AlignRight)
             data_to_send = encrypt_aes((to_send + f"|{self.name}").encode())
             self._send_chunks(pack_data(data_to_send, self.server_pubkey))
         self.send_field.clear()
@@ -234,38 +237,34 @@ class ChatWidget(QWidget):
 
     def display_attach(self, files):
         for f, pic in files:
+            attachment = None
             if pic:
-                self.t = Thread(target=self._send_file, args=(f, True))
-                self.t.start()
-                img = SingleImage(compress_image(f))
-                img.setFocusProxy(self.send_field)
-                self.layout.addWidget(img, alignment=Qt.AlignRight)
+                compressed = compress_image(f)
+                args = (compressed, True)
+                attachment = SingleImage(compressed)
             else:
-                self.t = Thread(target=self._send_file, args=(f, False))
-                self.t.start()
-                doc = DocAttachment(f)
-                doc.setFocusProxy(self.send_field)
-                self.layout.addWidget(doc, alignment=Qt.AlignRight)
+                args = (f, False)
+                attachment = DocAttachment(f)
+            self.t = Thread(target=self._send_file, args=args)
+            self.t.start()
+            attachment.setFocusProxy(self.send_field)
+            self.chat_layout.addWidget(attachment, alignment=Qt.AlignRight)
             sleep(0.05)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
 
     def _send_file(self, f, is_pic):
+        with open(f, "rb") as file:
+            data = file.read()
+        data, key = encrypt_aes(data)
         if is_pic:
-            compressed = compress_image(f)
-            with open(compressed, "rb") as image:
-                data = image.read()
-                data, key = encrypt_aes(data)
-                _, ext = os.path.splitext(compressed)
-                data = (b"IMAGE:" + ext.encode() + b'<img>' + data, key)
-                self._send_chunks(pack_data(data, self.server_pubkey))
+            _, ext = os.path.splitext(f)
+            data = (b"IMAGE:" + ext.encode() + b'<img>' + data, key)
+            self._send_chunks(pack_data(data, self.server_pubkey))
         else:
-            with open(f, "rb") as doc:
-                data = doc.read()
-                data, key = encrypt_aes(data)
-                filename = os.path.basename(f)
-                data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
-                self._send_chunks(pack_data(data, self.server_pubkey))
+            filename = os.path.basename(f)
+            data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
+            self._send_chunks(pack_data(data, self.server_pubkey))
 
     def _send_chunks(self, data, chunk_size=65536):
         self.s.sendall(len(data).to_bytes(4, 'big'))

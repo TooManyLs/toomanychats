@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.streams import StreamReader, StreamWriter
 import socket
 from base64 import b64encode, b64decode
 import ssl
@@ -7,15 +8,10 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
 from database import Connect
-from encryption import (
-    encrypt_aes, 
-    decrypt_aes, 
-    generate_sha256, 
-    send_encrypted, 
-    recv_encrypted,
-    pack_data,
-    unpack_data,
-    )
+from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
+                        send_encrypted, recv_encrypted, pack_data, 
+                        unpack_data,
+                        )
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
@@ -30,7 +26,8 @@ f_codes = {
 client_sockets = set()
 authenticated_users = {}
 
-async def send_chunks(writer, data: bytes, chunk_size=65536):
+async def send_chunks(writer: StreamWriter, data: bytes, 
+                      chunk_size: int=65536) -> None:
     writer.write(len(data).to_bytes(4, 'big'))
     await writer.drain()
     for i in range(0, len(data), chunk_size):
@@ -38,7 +35,8 @@ async def send_chunks(writer, data: bytes, chunk_size=65536):
         writer.write(chunk)
         await writer.drain()
 
-async def receive_chunks(reader, chunk_size=65536):
+async def receive_chunks(reader: StreamReader, 
+                         chunk_size: int=65536) -> bytes:
     data_length_bytes = await reader.readexactly(4)
     if data_length_bytes == b'code':
         return b'/code'
@@ -54,7 +52,8 @@ async def receive_chunks(reader, chunk_size=65536):
             raise RuntimeError("Socket connection broken")
     return b''.join(chunks)
 
-async def listen_for_client(reader, writer, username):
+async def listen_for_client(reader: StreamReader, writer: StreamWriter, 
+                            username: str) -> None:
     with Connect(db_pass) as db:
         while True:
             try:
@@ -90,8 +89,10 @@ async def listen_for_client(reader, writer, username):
                 del f_codes[username]
                 writer.close()
                 break
+            del data, msg, aes, pub, dec_key, pubkey
 
-async def handle_command(cmd, reader, writer, username=None):
+async def handle_command(cmd: str, reader: StreamReader, 
+                         writer: StreamWriter, username: str=None) -> None:
     with Connect(db_pass) as db:
         hr = "-" * 80
         if cmd == "/signup":
@@ -141,7 +142,7 @@ async def handle_command(cmd, reader, writer, username=None):
             user_pub = user["public_key"].encode()
             await send_chunks(writer, pack_data(encrypt_aes(code.encode()), user_pub))
 
-async def handle_client(reader, writer):
+async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
     with Connect(db_pass) as db:
         cli_addr = writer.get_extra_info('peername')
         print(f"[+] {cli_addr} connected.")
@@ -191,7 +192,7 @@ async def handle_client(reader, writer):
                        else f"[-] {cli_addr} tries to connect as {username}")
                 writer.write("failed".encode())
 
-async def main():
+async def main() -> None:
     ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_context.load_cert_chain(certfile='ssl/cert.pem', 
                                 keyfile='ssl/private_key.pem')   
@@ -203,7 +204,7 @@ async def main():
         ssl=ssl_context)
 
     addr = server.sockets[0].getsockname()
-    print(f"[*] Listening on {addr}", ssl_context.protocol)
+    print(f"[*] Listening on {addr}")
 
     async with server:
         await server.serve_forever()

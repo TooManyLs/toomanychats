@@ -2,11 +2,14 @@ import os
 
 from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, Signal
 
 from .custom_menu import CustomMenu
 
 class TextArea(QTextEdit):
+    attach = Signal(list)
+    send = Signal()
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -36,10 +39,7 @@ class TextArea(QTextEdit):
                 if os.path.isdir(url.toLocalFile()):
                     return
             files = [u.toLocalFile() for u in source.urls()]
-            try:
-                self.parent().attach_file(files)
-            except AttributeError:
-                self.parent().parent().attach_file(files)
+            self.attach.emit(files)
             return
         text = source.text()
         fragment = QTextDocumentFragment.fromPlainText(text)
@@ -47,10 +47,7 @@ class TextArea(QTextEdit):
 
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key_Return and not event.modifiers() & Qt.ShiftModifier:
-            try:
-                self.parent().on_send()
-            except AttributeError:
-                self.parent().parent().on_send()
+            self.send.emit()
         else:
             super().keyPressEvent(event)
 
