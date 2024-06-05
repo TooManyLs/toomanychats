@@ -27,7 +27,7 @@ client_sockets = set()
 authenticated_users = {}
 
 async def send_chunks(writer: StreamWriter, data: bytes, 
-                      chunk_size: int=65536) -> None:
+                      chunk_size: int = 65536) -> None:
     writer.write(len(data).to_bytes(4, 'big'))
     await writer.drain()
     for i in range(0, len(data), chunk_size):
@@ -36,7 +36,7 @@ async def send_chunks(writer: StreamWriter, data: bytes,
         await writer.drain()
 
 async def receive_chunks(reader: StreamReader, 
-                         chunk_size: int=65536) -> bytes:
+                         chunk_size: int = 65536) -> bytes:
     data_length_bytes = await reader.readexactly(4)
     if data_length_bytes == b'code':
         return b'/code'
@@ -59,7 +59,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
             try:
                 data = await receive_chunks(reader)
                 if not data:
-                    raise ConnectionResetError
+                    break
                 msg, aes, pub = unpack_data(data)
 
                 if pub != SERVER_RSA.public_key():
@@ -72,9 +72,13 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                 for u, cli in authenticated_users.items():
                     if u == username or cli == writer:
                         continue
-                    user = db.get_user(u, "public_key")
-                    pubkey = user["public_key"].encode()
-                    await send_chunks(cli, pack_data((msg, dec_key), pubkey))
+                    pubkey = db.get_pubkey(u)
+                    if pubkey:
+                        await send_chunks(
+                            cli, 
+                            pack_data((msg, dec_key), pubkey)
+                            )
+                del data, msg
             except ValueError:
                 msg = data.decode()
                 await handle_command(msg, reader, writer, username)
@@ -89,10 +93,9 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                 del f_codes[username]
                 writer.close()
                 break
-            del data, msg, aes, pub, dec_key, pubkey
 
 async def handle_command(cmd: str, reader: StreamReader, 
-                         writer: StreamWriter, username: str=None) -> None:
+                         writer: StreamWriter, username: str = "") -> None:
     with Connect(db_pass) as db:
         hr = "-" * 80
         if cmd == "/signup":
@@ -115,7 +118,7 @@ async def handle_command(cmd: str, reader: StreamReader,
                 aes = s_cipher.decrypt(aes)
                 reg_info = decrypt_aes(reg_info, aes).decode()
                 name, passw, salt, pubkey = reg_info.split("|")
-                if db.get_user(name, "name") is None:
+                if db.get_user(name) is None:
                     writer.write("[+] You've successfully created an account!"
                                  .encode())
                     f_codes[friend] = generate_sha256()
@@ -130,17 +133,19 @@ async def handle_command(cmd: str, reader: StreamReader,
                     writer.write(f"[-] {name} is not available.".encode())
                     continue
         elif cmd == "/userlist":
-            user = db.get_user(username, "public_key")
-            user_pub = user["public_key"].encode()
+            user_pub = db.get_pubkey(username)
             userlist =\
              f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
             writer.write(send_encrypted(encrypt_aes(userlist.encode()), user_pub)\
                     .encode())
         elif cmd == "/code":
             code = f"{f_codes[username]}"
-            user = db.get_user(username, "public_key")
-            user_pub = user["public_key"].encode()
-            await send_chunks(writer, pack_data(encrypt_aes(code.encode()), user_pub))
+            user_pub = db.get_pubkey(username)
+            if user_pub:
+                await send_chunks(
+                    writer, 
+                    pack_data(encrypt_aes(code.encode()), user_pub)
+                    )
 
 async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
     with Connect(db_pass) as db:

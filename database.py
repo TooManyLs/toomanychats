@@ -1,5 +1,13 @@
 import psycopg2
 import psycopg2.extras
+from typing import TypedDict
+
+class Users(TypedDict):
+    name: str
+    password: bytes
+    salt: bytes
+    public_key: str
+ 
 
 class Connect:
     def __init__(self, password):
@@ -19,25 +27,44 @@ class Connect:
         if self.conn:
             self.conn.close()
 
-    def get_user(self, name, values="*"):
-        cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    def get_user(self, name: str) -> Users | None:
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
-            f"SELECT {values} FROM public.users WHERE name = %s", 
+            "SELECT * FROM public.users WHERE name = %s", 
             (name,)
         )
         user = cur.fetchone()
         cur.close()
-        return user
+        if user:
+            row: Users = {
+                "name": user["name"],
+                "password": user["password"],
+                "salt": user["salt"],
+                "public_key": user["public_key"]
+            }
+            return row
+    
+    def get_pubkey(self, name: str) -> bytes | None:
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute(
+            "SELECT public_key FROM public.users WHERE name = %s", 
+            (name,)
+        )
+        row = cur.fetchone()
+        cur.close()
+        if row:
+            return row[0].encode()
+
 
     def get_by_pubkey(self, public_key):
-        cur = self.conn.cursor()
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             "SELECT name FROM public.users WHERE public_key = %s",
             (public_key.decode('utf-8'))
         )
         user = cur.fetchone()
         cur.close()
-        return user[0] if user else None
+        return user["name"] if user else None
 
     def get_all_users(self):
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -48,7 +75,8 @@ class Connect:
         cur.close()
         return users
 
-    def add_user(self, name, password, salt, public_key):
+    def add_user(self, name: str, password: bytes, 
+                 salt: bytes, public_key: bytes) -> None:
         cur = self.conn.cursor()
         cur.execute(
             "INSERT INTO users (name, password, salt, public_key) VALUES (%s, %s, %s, %s)", 
