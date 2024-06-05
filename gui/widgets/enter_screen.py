@@ -17,10 +17,11 @@ from .components import CustomMenu, ServerDialog
 
 class EnterWidget(QWidget):
     reinit = Signal()
-    def __init__(self, stacked_layout, s):
+    def __init__(self, stacked_layout, s, window):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
+        self.main_window = window
 
         layout = QGridLayout()
 
@@ -53,7 +54,8 @@ class EnterWidget(QWidget):
 
         self.menu.add_action("Connect to...", self.connect_to)
         self.options.setMenu(self.menu)
-        self.options.setPopupMode(QToolButton.InstantPopup)
+        self.options.setPopupMode(
+            QToolButton.ToolButtonPopupMode.InstantPopup)
 
         buttons = QVBoxLayout()
         buttons.addWidget(self.sign_in_button)
@@ -64,7 +66,10 @@ class EnterWidget(QWidget):
         self.sign_up_button.setMaximumWidth(400)
 
         option = QVBoxLayout()
-        option.addWidget(self.options, alignment=Qt.AlignTop | Qt.AlignRight)
+        option.addWidget(self.options, 
+                         alignment=Qt.AlignmentFlag.AlignTop 
+                         | Qt.AlignmentFlag.AlignRight
+                         )
         
         layout.addItem(buttons, 1, 1)
         layout.addItem(option, 0, 2)
@@ -139,7 +144,7 @@ class EnterWidget(QWidget):
 
     def connect_to(self):
         self.dialog = ServerDialog(server_list=self.servernames ,parent=self)
-        self.window().overlay.show()
+        self.main_window.overlay.show()
         parent_geometry = self.window().geometry()
         self.dialog.move(
             parent_geometry.center() - self.dialog.rect().center())
@@ -147,9 +152,9 @@ class EnterWidget(QWidget):
 
     def _on_dialog_finished(self, result, info=[], add=False):
         self.dialog.hide()
-        self.window().overlay.hide()
+        self.main_window.overlay.hide()
 
-        if result == QDialog.Rejected:
+        if result == QDialog.DialogCode.Rejected:
             return
         
         addr, new_server = info
@@ -170,5 +175,5 @@ class EnterWidget(QWidget):
 
     def showEvent(self, event) -> None:
         if isinstance(self.window(), QMainWindow):
-            self.window().overlay.raise_()
+            self.main_window.overlay.raise_()
         

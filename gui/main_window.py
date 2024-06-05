@@ -53,11 +53,12 @@ class MainWindow(QMainWindow):
 
 
         # Screens' initialization
-        self.enter_widget = EnterWidget(self.stacked_layout, self.s)
+        self.enter_widget = EnterWidget(self.stacked_layout, self.s, self)
         self.sign_in = SignIn(self.stacked_layout, self.s, self.server_pubkey)
         self.sign_up = SignUp(self.stacked_layout, self.s, self.server_pubkey)
         self.main_widget = ChatWidget(self.stacked_layout, 
-                                      self.s, self.server_pubkey)
+                                      self.s, self.server_pubkey, 
+                                      self)
 
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
         self.main_widget.header.reinit.connect(self.initUI)
@@ -97,11 +98,8 @@ class MainWindow(QMainWindow):
         self.overlay.resize(event.size())
     
     def dragEnterEvent(self, event):
-        try:
-            if event.source().window() is self:
-                return
-        except AttributeError:
-            pass
+        if event.source():
+            return
         try:
             if self.main_widget.dialog.isVisible():
                 return
@@ -134,8 +132,8 @@ window.setStyleSheet(
     """
     )
 palette = QPalette()
-palette.setColor(QPalette.Window, QColor("#1e1e1e"))
-palette.setColor(QPalette.WindowText, QColor("white"))
+palette.setColor(QPalette.ColorRole.Window, QColor("#1e1e1e"))
+palette.setColor(QPalette.ColorRole.WindowText, QColor("white"))
 
 app.setPalette(palette)
 window.resize(1000, 800)

@@ -1,4 +1,5 @@
 import os
+from socket import socket
 from threading import Thread
 from time import sleep
 
@@ -17,6 +18,8 @@ from PySide6.QtGui import Qt, QIcon, QCursor
 from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer, QMimeData
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
+from Crypto.PublicKey.RSA import RsaKey
+from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 
 from .utils.encryption import (
     encrypt_aes, 
@@ -39,7 +42,7 @@ class Worker(QObject):
     finished = Signal()
     message_received = Signal(bytes, bytes)
 
-    def __init__(self, s, my_cipher, pvt):
+    def __init__(self, s: socket, my_cipher: PKCS1OAEP_Cipher, pvt: RsaKey):
         super().__init__()
         self.s = s
         self.my_cipher = my_cipher
@@ -68,7 +71,7 @@ class Worker(QObject):
                 break
         self.finished.emit()
 
-    def _receive_chunks(self, chunk_size=65536):
+    def _receive_chunks(self, chunk_size: int = 65536) -> bytes:
         data_length = int.from_bytes(self.s.recv(4), 'big')
         chunks = []
         bytes_read = 0
@@ -78,20 +81,23 @@ class Worker(QObject):
                 chunks.append(chunk)
                 bytes_read += len(chunk)
             else:
-                return None
+                raise RuntimeError("Socket connection broken")
         return b''.join(chunks)
 
 
 class ChatWidget(QWidget):
-    def __init__(self, stacked_layout, s, server_pubkey):
+    def __init__(self, stacked_layout, s: socket, 
+                 server_pubkey: RsaKey , window):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
-        self.server_pubkey = server_pubkey
+        self.server_pubkey = server_pubkey.export_key()
+        self.main_window = window
 
         self.scroll_area = ScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.horizontalScrollBar().setEnabled(False)
 
         self.chat_area = QWidget()
@@ -101,22 +107,23 @@ class ChatWidget(QWidget):
         self.chat_layout = QVBoxLayout(self.chat_area)
         self.chat_layout.setSpacing(5)
         self.chat_layout.addItem(
-            QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+            QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, 
+                        QSizePolicy.Policy.Expanding))
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)
         main_layout.setSpacing(0)
 
         attach_icon = QIcon("./public/attach.png")
-        self.attach = QPushButton(icon=attach_icon)
+        self.attach = QPushButton(attach_icon, "")
         self.button = QPushButton("Send")
         self.send_field = TextArea()
         self.send_field.attach.connect(self.attach_file)
         self.send_field.send.connect(self.on_send)
         self.send_field.setPlaceholderText("Write a message...")
         self.send_field.setObjectName("tarea")
-        self.attach.setCursor(QCursor(Qt.PointingHandCursor))
-        self.button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.attach.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.setStyleSheet(
             """
             QPushButton{
@@ -164,12 +171,12 @@ class ChatWidget(QWidget):
             my_pvtkey = RSA.import_key(f.read())
         self.my_cipher = PKCS1_OAEP.new(my_pvtkey)
         self.worker = Worker(self.s, self.my_cipher, my_pvtkey)
-        self.thread = QThread()
-        self.worker.moveToThread(self.thread)
-        self.worker.finished.connect(self.thread.quit)
+        self.wk_thread = QThread()
+        self.worker.moveToThread(self.wk_thread)
+        self.worker.finished.connect(self.wk_thread.quit)
         self.worker.message_received.connect(self.on_message_received)
-        self.thread.started.connect(self.worker.run)
-        self.thread.start()
+        self.wk_thread.started.connect(self.worker.run)
+        self.wk_thread.start()
 
     @Slot(bytes, bytes)
     def on_message_received(self, msg, ext):
@@ -177,17 +184,21 @@ class ChatWidget(QWidget):
         ext = ext.decode()
         if ext and ext in picture_type:
             name = generate_name() + ext
-            with open(f"./cache/img/{name}", "wb") as image:
-                image.write(msg)
-            img = SingleImage(f"./cache/img/{name}")
+            path = f"./cache/img/{name}"
+            with open(path, 'wb') as file:
+                file.write(msg)
+            img = SingleImage(path)
             img.setFocusProxy(self.send_field)
-            self.chat_layout.addWidget(img, alignment=Qt.AlignLeft)
+            self.chat_layout.addWidget(img, 
+                                       alignment=Qt.AlignmentFlag.AlignLeft)
         elif ext and ext not in picture_type:
-            with open(f"./cache/attachments/{ext}", "wb") as doc:
-                doc.write(msg)
+            path = f"./cache/attachments/{ext}"
+            with open(path, 'wb') as file:
+                file.write(msg)
             doc = DocAttachment(f"./cache/attachments/{ext}")
             doc.setFocusProxy(self.send_field)
-            self.chat_layout.addWidget(doc, alignment=Qt.AlignLeft)
+            self.chat_layout.addWidget(doc, 
+                                       alignment=Qt.AlignmentFlag.AlignLeft)
         else:
             msg = msg.decode()
             try:
@@ -201,8 +212,9 @@ class ChatWidget(QWidget):
             bubble = TextBubble(msg, nametag)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
-            self.chat_layout.addWidget(bubble, alignment=Qt.AlignLeft)
-
+            self.chat_layout.addWidget(bubble, 
+                                       alignment=Qt.AlignmentFlag.AlignLeft)
+            
     def on_send(self, cmd=""):
         if cmd == "@get_code":
             self.s.send("code".encode())
@@ -212,7 +224,8 @@ class ChatWidget(QWidget):
             bubble = TextBubble(to_send)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
-            self.chat_layout.addWidget(bubble, alignment=Qt.AlignRight)
+            self.chat_layout.addWidget(bubble, 
+                                       alignment=Qt.AlignmentFlag.AlignRight)
             data_to_send = encrypt_aes((to_send + f"|{self.name}").encode())
             self._send_chunks(pack_data(data_to_send, self.server_pubkey))
         self.send_field.clear()
@@ -226,13 +239,13 @@ class ChatWidget(QWidget):
                 filter="All files (*.*)")
         if files:
             self.dialog = AttachDialog(self, files=files)
-            self.window().overlay.show()
+            self.main_window.overlay.show()
             self.dialog.show()
 
     def on_dialog_finished(self, result, files):
         self.dialog.hide()
-        self.window().overlay.hide()
-        if result == QDialog.Accepted:
+        self.main_window.overlay.hide()
+        if result == QDialog.DialogCode.Accepted:
             self.display_attach(files)
 
     def display_attach(self, files):
@@ -248,7 +261,8 @@ class ChatWidget(QWidget):
             self.t = Thread(target=self._send_file, args=args)
             self.t.start()
             attachment.setFocusProxy(self.send_field)
-            self.chat_layout.addWidget(attachment, alignment=Qt.AlignRight)
+            self.chat_layout.addWidget(attachment, 
+                                       alignment=Qt.AlignmentFlag.AlignRight)
             sleep(0.05)
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
@@ -266,7 +280,7 @@ class ChatWidget(QWidget):
             data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
             self._send_chunks(pack_data(data, self.server_pubkey))
 
-    def _send_chunks(self, data, chunk_size=65536):
+    def _send_chunks(self, data: bytes, chunk_size: int = 65536):
         self.s.sendall(len(data).to_bytes(4, 'big'))
         for i in range(0, len(data), chunk_size):
             chunk = data[i:i+chunk_size]
@@ -292,6 +306,6 @@ class ChatWidget(QWidget):
                     c.name_text.compute_size()
 
     def showEvent(self, event) -> None:
-        self.window().overlay.raise_()
+        self.main_window.overlay.raise_()
     
     
