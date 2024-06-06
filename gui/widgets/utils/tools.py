@@ -1,11 +1,10 @@
 import os
 import binascii
 from datetime import datetime
-import tempfile
 from functools import wraps
 from time import perf_counter
-import shutil
 from io import BytesIO
+from collections import OrderedDict
 
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener, register_avif_opener
@@ -19,42 +18,42 @@ def generate_name() -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return f"{dust}_{timestamp}"
 
-def cache_check(func):
-    cache = {}
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        key = (args, frozenset(kwargs.items()))
-        if key in cache:
-            output_path = cache[key]
-            if os.path.exists(output_path):
-                return output_path
-        result = func(*args, **kwargs)
-        cache[key] = result
-        return result
-    return wrapper
+def cache_check(max_size: int):
+    def decorator(func):
+        cache = OrderedDict()
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            key = (args, frozenset(kwargs.items()))
+            if key in cache:
+                # Move the accessed key to the end of the OrderedDict
+                cache.move_to_end(key)
+                return cache[key]
+            result = func(*args, **kwargs)
+            cache[key] = result
+            # If the cache has exceeded max_size, remove the oldest item
+            if len(cache) > max_size:
+                cache.popitem(last=False)
+            return result
+        return wrapper
+    return decorator
 
-@cache_check
-def compress_image(image_path: str="", max_size: int=1280, 
-                   *, gif_compression: bool=False, temp: bool=False) -> str | QImage:
-    if image_path[-4:] == ".gif" and not gif_compression:
-        path = f"./cache/img/{generate_name()}.gif"
-        shutil.copyfile(image_path, path)
-        return path
+@cache_check(max_size=64)
+def compress_image(image_path: str="", max_size: int = 1280) -> QImage:
     if not image_path:
         clipboard = QApplication.clipboard()
         img = clipboard.image()
 
         buffer = QBuffer()
-        buffer.open(QBuffer.ReadWrite)
+        buffer.open(QBuffer.OpenModeFlag.ReadWrite)
         img.save(buffer, "JPEG")
-    if temp:
-        _, output_path = tempfile.mkstemp(suffix=".jpg")
+        byte_arr = buffer.data().data()
     else:
-        output_path = f"./cache/img/{generate_name()}.jpg"
+        with open(image_path, 'rb') as f:
+            byte_arr = f.read()
 
     register_heif_opener()
     register_avif_opener()
-    with Image.open(image_path if image_path else BytesIO(buffer.data())) as img:
+    with Image.open(BytesIO(byte_arr)) as img:
         img = ImageOps.exif_transpose(img)
         width, height = img.size
         max_dim = max(width, height)
@@ -68,16 +67,19 @@ def compress_image(image_path: str="", max_size: int=1280,
             img = img.resize((new_width, new_height), Image.LANCZOS)
 
         img = img.convert("RGB")
-        if image_path:
-            img.save(output_path, "JPEG", quality=90)
-        else:
-            byte_arr = BytesIO()
-            img.save(byte_arr, format='JPEG', quality=90)
-            byte_arr = byte_arr.getvalue()
-            compressed_qimage = QImage.fromData(byte_arr, "JPEG")
-            return compressed_qimage
+        byte_arr = BytesIO()
+        img.save(byte_arr, format='JPEG', quality=90 if max_size > 128 else 30)
+        byte_arr = byte_arr.getvalue()
+        compressed_qimage = QImage.fromData(byte_arr, "JPEG")
 
-    return output_path
+    return compressed_qimage
+
+def qimage_to_bytes(image: QImage) -> bytes:
+    buffer = QBuffer()
+    buffer.open(QBuffer.OpenModeFlag.ReadWrite)
+    image.save(buffer, "JPEG")
+    bytes_data = buffer.data().data()
+    return bytes_data
 
 def timer(func):
     def wrapper(*args, **kwargs):
