@@ -300,10 +300,9 @@ class ChatWidget(QWidget):
             event.accept()
         for c in self.chat_area.children():
             if c.isWidgetType():
-                try:
-                    c.compute_size()
-                except AttributeError:
-                    c.name_text.compute_size()
+                # All widgets in "chat_area" should be resizable
+                # so we assume that "c" has "compute_size" attribute
+                c.compute_size() #type: ignore
 
     def showEvent(self, event) -> None:
         self.main_window.overlay.raise_()

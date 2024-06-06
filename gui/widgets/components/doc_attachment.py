@@ -157,6 +157,9 @@ class DocAttachment(QFrame):
             self.name.setStyleSheet("padding-left: 7px; padding-top: 2px;")
             self.setFixedHeight(103)
 
+    def compute_size(self):
+        self.name_text.compute_size()
+
     def eventFilter(self, watched, event):
         if event.type() == QEvent.MouseButtonRelease and isinstance(watched, QLineEdit):
             self.mouseReleaseEvent(event)
