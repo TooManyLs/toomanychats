@@ -1,6 +1,3 @@
-from base64 import b64decode, b64encode
-import json
-
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
@@ -31,28 +28,6 @@ def decrypt_aes(msg: bytes, key: bytes) -> bytes:
     cipher = AES.new(key, AES.MODE_CBC, iv)
     decrypted_message = cipher.decrypt(msg[16:])
     return unpad(decrypted_message, AES.block_size)
-
-def send_encrypted(msg, pubkey):
-    try:
-        pubkey = RSA.import_key(pubkey)
-    except:
-        pass
-    cipher = PKCS1_OAEP.new(pubkey)
-    text, key = msg
-    pubkey_bytes = pubkey.export_key()
-    return json.dumps((
-        b64encode(text).decode('utf-8'), 
-        b64encode(cipher.encrypt(key)).decode('utf-8'), 
-        pubkey_bytes.decode('utf-8')
-        ))
-
-def recv_encrypted(msg):
-    text, aes, pub = json.loads(msg)
-    return (
-        b64decode(text.encode('utf-8')), 
-        b64decode(aes.encode('utf-8')), 
-        RSA.import_key(pub.encode('utf-8'))
-    )
 
 def pack_data(msg: tuple[bytes, bytes], public_key: bytes) -> bytes:
     pubkey = RSA.import_key(public_key)

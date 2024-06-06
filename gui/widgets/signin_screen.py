@@ -15,9 +15,13 @@ from Crypto.PublicKey import RSA
 from .utils.encryption import (
     decrypt_aes, 
     generate_key, 
-    recv_encrypted
+    unpack_data
     )
 from .components import TextField
+
+class AuthError(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
 
 class SignIn(QWidget):
     name_signal = Signal(str)
@@ -127,10 +131,13 @@ class SignIn(QWidget):
                 with open(f"keys/{name}_private.pem", "rb") as f:
                     my_pvtkey = RSA.import_key(f.read())
                 my_cipher = PKCS1_OAEP.new(my_pvtkey)
-                data = self.s.recv(2048).decode()
-                if data == "failed":
-                    raise Exception
-                data, aes, pub = recv_encrypted(data)
+                data = self.s.recv(2048)
+                try:
+                    if data.decode() == "failed":
+                        raise AuthError
+                except UnicodeDecodeError:
+                    pass
+                data, aes, pub = unpack_data(data)
                 aes = my_cipher.decrypt(aes)
                 server_resp = decrypt_aes(data, aes).decode()
                 salt, challenge = server_resp.split("|")
@@ -143,7 +150,7 @@ class SignIn(QWidget):
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
                     self.name_signal.emit(name)
-            except Exception:
+            except (FileNotFoundError, AuthError):
                 self.s.send("Fail".encode())
                 self.incorrect.setText(
                     "Failed to authenticate:\nInvalid username or password.")

@@ -9,9 +9,7 @@ from Crypto.Cipher import PKCS1_OAEP
 
 from database import Connect
 from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
-                        send_encrypted, recv_encrypted, pack_data, 
-                        unpack_data,
-                        )
+                        pack_data, unpack_data,)
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
@@ -65,7 +63,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                 if pub != SERVER_RSA.public_key():
                     user = db.get_by_pubkey(pub.export_key().decode())
                     cli = authenticated_users[user]
-                    cli.write(send_encrypted(msg, aes), pub).encode()
+                    cli.write(pack_data((msg, aes), pub.export_key()))
                     continue
                 
                 dec_key = s_cipher.decrypt(aes)
@@ -111,10 +109,12 @@ async def handle_command(cmd: str, reader: StreamReader,
                 return
             while True:
                 data = await reader.read(2048)
-                reg_info = data.decode()
-                if reg_info == "c":
-                    return
-                reg_info, aes, pub = recv_encrypted(reg_info)
+                try:
+                    if data.decode == "c":
+                        return
+                except UnicodeDecodeError:
+                    pass
+                reg_info, aes, pub = unpack_data(data)
                 aes = s_cipher.decrypt(aes)
                 reg_info = decrypt_aes(reg_info, aes).decode()
                 name, passw, salt, pubkey = reg_info.split("|")
@@ -134,10 +134,11 @@ async def handle_command(cmd: str, reader: StreamReader,
                     continue
         elif cmd == "/userlist":
             user_pub = db.get_pubkey(username)
+            if user_pub is None:
+                return
             userlist =\
              f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
-            writer.write(send_encrypted(encrypt_aes(userlist.encode()), user_pub)\
-                    .encode())
+            writer.write(pack_data(encrypt_aes(userlist.encode()), user_pub))
         elif cmd == "/code":
             code = f"{f_codes[username]}"
             user_pub = db.get_pubkey(username)
@@ -177,9 +178,9 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
                 challenge, _ = encrypt_aes("OK".encode(), password)       
                 challenge_string =\
                 f"{b64encode(salt).decode()}|{b64encode(challenge).decode()}"
-                writer.write(send_encrypted(
+                writer.write(pack_data(
                     encrypt_aes(challenge_string.encode()), user_pub
-                    ).encode())
+                    ))
 
                 data = await reader.read(1024)
                 response = data.decode()

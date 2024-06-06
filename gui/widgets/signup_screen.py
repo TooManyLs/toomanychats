@@ -1,5 +1,6 @@
 import os
 from base64 import b64encode
+from socket import socket
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -12,20 +13,21 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV, QIcon
 from PySide6.QtCore import QRegularExpression as Q_re, Qt
 from Crypto.PublicKey import RSA
+from Crypto.PublicKey.RSA import RsaKey
 
 from .utils.encryption import (
     encrypt_aes, 
     generate_key, 
-    send_encrypted,
+    pack_data
     )
 from .components import TextField
 
 class SignUp(QWidget):
-    def __init__(self, stacked_layout, s, server_pubkey):
+    def __init__(self, stacked_layout, s: socket, server_pubkey: RsaKey):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
-        self.server_pubkey = server_pubkey
+        self.server_pubkey = server_pubkey.export_key()
 
         self.main_layout = QGridLayout()
         self.back = QVBoxLayout()
@@ -34,7 +36,9 @@ class SignUp(QWidget):
         self.back_btn.setFixedSize(30, 30)
         self.back_btn.setObjectName("back")
         
-        self.back.addWidget(self.back_btn, alignment=Qt.AlignLeft | Qt.AlignTop)
+        self.back.addWidget(self.back_btn, 
+                            alignment=Qt.AlignmentFlag.AlignLeft 
+                                      | Qt.AlignmentFlag.AlignTop)
 
         self.friend_code = TextField("Friend code:", "#2e2e2e")
         self.friend_name = TextField("Friend username:", "#2e2e2e")
@@ -198,8 +202,7 @@ class SignUp(QWidget):
                                + f"{pubkey.decode('utf-8')}")
                                 .encode('utf-8'))
             
-            self.s.send(send_encrypted(data, self.server_pubkey)
-                        .encode('utf-8'))
+            self.s.send(pack_data(data, self.server_pubkey))
             ok = self.s.recv(1024).decode('utf-8')
             if "[+]" in ok:
                 with open(f"keys/{name}_private.pem", "wb") as f:
