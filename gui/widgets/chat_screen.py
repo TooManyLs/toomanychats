@@ -1,20 +1,13 @@
 import os
-from socket import socket
+from ssl import SSLSocket
 from threading import Thread
 from time import sleep
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QSpacerItem, 
-    QSizePolicy, 
-    QFileDialog,
-    QApplication,
-    QDialog,
-    )
-from PySide6.QtGui import Qt, QIcon, QCursor
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+                               QPushButton, QSpacerItem, QSizePolicy,
+                               QFileDialog, QApplication, QDialog,
+                               )
+from PySide6.QtGui import Qt, QIcon, QCursor, QImage, QMovie
 from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer, QMimeData
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
@@ -27,29 +20,23 @@ from .utils.encryption import (
     pack_data,
     unpack_data,
     )
-from .utils.tools import generate_name, compress_image, timer
-from .components import (
-    TextBubble, 
-    SingleImage, 
-    ScrollArea, 
-    DocAttachment,
-    AttachDialog,
-    ChatHeader,
-    TextArea
-    )
+from .utils.tools import compress_image, qimage_to_bytes, generate_name
+from .components import (TextBubble, SingleImage, ScrollArea,
+                         DocAttachment,AttachDialog,ChatHeader,
+                         TextArea)
 
 class Worker(QObject):
     finished = Signal()
     message_received = Signal(bytes, bytes)
 
-    def __init__(self, s: socket, my_cipher: PKCS1OAEP_Cipher, pvt: RsaKey):
+    def __init__(self, s: SSLSocket, my_cipher: PKCS1OAEP_Cipher, pvt: RsaKey):
         super().__init__()
         self.s = s
         self.my_cipher = my_cipher
         self.pub = pvt.public_key()
 
     @Slot()
-    def run(self):
+    def run(self) -> None:
         while True:
             try:
                 data = self._receive_chunks()
@@ -65,9 +52,8 @@ class Worker(QObject):
                 msg = decrypt_aes(data, aes)
                 self.message_received.emit(msg, header)
                 del msg, data, aes, pub, header
-            except ValueError:
-                continue
-            except Exception:
+            except (OSError, ValueError):
+                print("disconnect")
                 break
         self.finished.emit()
 
@@ -86,7 +72,7 @@ class Worker(QObject):
 
 
 class ChatWidget(QWidget):
-    def __init__(self, stacked_layout, s: socket, 
+    def __init__(self, stacked_layout, s: SSLSocket, 
                  server_pubkey: RsaKey , window):
         super().__init__()
         self.stacked_layout = stacked_layout
@@ -165,7 +151,7 @@ class ChatWidget(QWidget):
         self.button.clicked.connect(self.on_send)
         self.attach.clicked.connect(self.attach_file)
 
-    def listen_for_messages(self, name):
+    def listen_for_messages(self, name: str) -> None:
         self.name = name
         with open(f"keys/{name}_private.pem", "rb") as f:
             my_pvtkey = RSA.import_key(f.read())
@@ -179,14 +165,16 @@ class ChatWidget(QWidget):
         self.wk_thread.start()
 
     @Slot(bytes, bytes)
-    def on_message_received(self, msg, ext):
+    def on_message_received(self, msg: bytes, header: bytes) -> None:
         picture_type = (".jpg", ".gif")
-        ext = ext.decode()
-        if ext and ext in picture_type:
-            name = generate_name() + ext
-            path = f"./cache/img/{name}"
-            with open(path, 'wb') as file:
-                file.write(msg)
+        ext = header.decode()
+        if ext in picture_type:
+            if ext == ".jpg":
+                path = QImage.fromData(msg)
+            else:
+                path = f"./cache/img/{generate_name()}.gif"
+                with open(path, 'wb') as file:
+                    file.write(msg)
             img = SingleImage(path)
             img.setFocusProxy(self.send_field)
             self.chat_layout.addWidget(img, 
@@ -200,22 +188,22 @@ class ChatWidget(QWidget):
             self.chat_layout.addWidget(doc, 
                                        alignment=Qt.AlignmentFlag.AlignLeft)
         else:
-            msg = msg.decode()
+            txt = msg.decode()
             try:
-                msg, nametag = msg.rsplit("|", 1)
+                txt, nametag = txt.rsplit("|", 1)
             except ValueError:
                 mime_data = QMimeData()
-                mime_data.setText(msg)
+                mime_data.setText(txt)
                 QApplication.clipboard().setMimeData(mime_data)
                 print("copied")
                 return
-            bubble = TextBubble(msg, nametag)
+            bubble = TextBubble(txt, nametag)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
             self.chat_layout.addWidget(bubble, 
                                        alignment=Qt.AlignmentFlag.AlignLeft)
             
-    def on_send(self, cmd=""):
+    def on_send(self, cmd: str = "") -> None:
         if cmd == "@get_code":
             self.s.send("code".encode())
             return
@@ -232,7 +220,7 @@ class ChatWidget(QWidget):
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
     
-    def attach_file(self, files=None):
+    def attach_file(self, files: list[str] | None):
         if not files:
             files, _ = QFileDialog().getOpenFileNames(
                 self, "Choose Files", 
@@ -242,19 +230,23 @@ class ChatWidget(QWidget):
             self.main_window.overlay.show()
             self.dialog.show()
 
-    def on_dialog_finished(self, result, files):
+    def on_dialog_finished(self, result: QDialog.DialogCode, 
+                           files: list[tuple[str, bool]]) -> None:
         self.dialog.hide()
         self.main_window.overlay.hide()
         if result == QDialog.DialogCode.Accepted:
             self.display_attach(files)
 
-    def display_attach(self, files):
+    def display_attach(self, files: list[tuple[str, bool]]) -> None:
         for f, pic in files:
-            attachment = None
             if pic:
-                compressed = compress_image(f)
-                args = (compressed, True)
-                attachment = SingleImage(compressed)
+                _, ext = os.path.splitext(f)
+                if ext != ".gif":
+                    compressed = compress_image(f)
+                    args = (compressed, True)
+                else:
+                    args = (f, True)
+                attachment = SingleImage(f)
             else:
                 args = (f, False)
                 attachment = DocAttachment(f)
@@ -267,20 +259,24 @@ class ChatWidget(QWidget):
         QApplication.processEvents()
         QTimer.singleShot(1, self.scroll_down)
 
-    def _send_file(self, f, is_pic):
-        with open(f, "rb") as file:
-            data = file.read()
+    def _send_file(self, f: str | QImage, is_pic: bool) -> None:
+        if isinstance(f, QImage):
+            data = qimage_to_bytes(f)
+        else:
+            with open(f, "rb") as file:
+                data = file.read()
+
         data, key = encrypt_aes(data)
-        if is_pic:
-            _, ext = os.path.splitext(f)
+        
+        if is_pic or isinstance(f, QImage):
+            ext = ".jpg" if isinstance(f, QImage) else ".gif"
             data = (b"IMAGE:" + ext.encode() + b'<img>' + data, key)
-            self._send_chunks(pack_data(data, self.server_pubkey))
         else:
             filename = os.path.basename(f)
             data = (b"DOCUMENT:" + filename.encode() + b'<doc>' + data, key)
-            self._send_chunks(pack_data(data, self.server_pubkey))
+        self._send_chunks(pack_data(data, self.server_pubkey))
 
-    def _send_chunks(self, data: bytes, chunk_size: int = 65536):
+    def _send_chunks(self, data: bytes, chunk_size: int = 65536) -> None:
         self.s.sendall(len(data).to_bytes(4, 'big'))
         for i in range(0, len(data), chunk_size):
             chunk = data[i:i+chunk_size]
@@ -306,5 +302,4 @@ class ChatWidget(QWidget):
 
     def showEvent(self, event) -> None:
         self.main_window.overlay.raise_()
-    
-    
+  
