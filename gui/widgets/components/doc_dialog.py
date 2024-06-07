@@ -161,7 +161,7 @@ class AttachDialog(QDialog):
         
 
     def dialog_accept(self):
-        files = []
+        files: list[tuple[str, bool]] = []
         for item in self.attachments:
             _, file, compressed = item
             files.append((file, compressed))
@@ -201,9 +201,7 @@ class AttachDialog(QDialog):
                 m = _pixmap.width() / 300
             label.setFixedSize(_pixmap.width()/m, _pixmap.height()/m)
         else:
-            image_reader = QImageReader(compress_image(path, temp=True))
-            image_reader.setAutoTransform(True)
-            image = image_reader.read()
+            image = compress_image(image_path=path)
             pixmap = QPixmap.fromImage(image)
             pixmap = pixmap.scaled(
                 300, 270, Qt.KeepAspectRatio, 

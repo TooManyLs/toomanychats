@@ -17,37 +17,39 @@ from PySide6.QtGui import (
     QCursor, 
     QPainter,  
     QPixmap, 
-    QImageReader, 
     QMovie,
-    QDrag
+    QDrag,
+    QImage
     )
 
 from .custom_menu import CustomMenu
 from ..utils.tools import compress_image, generate_name
 
 class SingleImage(QLabel):
-    def __init__(self, path="", *args, **kwargs):
+    def __init__(self, path: QImage | str = "", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.temp_file = None
-        self.path = path
+        self.path = path if isinstance(path, str) else ""
         if not path:
             self.image = compress_image()
             self._pixmap = QPixmap.fromImage(self.image)
             self.setPixmap(self._pixmap)
         else:
-            if path[-4:] == ".gif":
+            if self.path[-4:] == ".gif":
+                new_path = f"./cache/img/{generate_name()}.gif"
+                shutil.copyfile(path, new_path)
+                path = new_path
                 mov = QMovie(path)
                 self.setMovie(mov)
                 mov.start()
                 self._pixmap = mov
             else:
-                image_reader = QImageReader(path)
-                image_reader.setAutoTransform(True)
-                image = image_reader.read()
-
-                pixmap = QPixmap.fromImage(image)
-                self.setPixmap(pixmap)
-                self._pixmap = pixmap
+                if not isinstance(path, QImage):
+                    self.image = compress_image(path)
+                else:
+                    self.image = path
+                self._pixmap = QPixmap.fromImage(self.image)
+                self.setPixmap(self._pixmap)
         self._resized = False
         self.setScaledContents(True)
         self.setCursor(QCursor(Qt.PointingHandCursor))
@@ -167,7 +169,7 @@ class SingleImage(QLabel):
         self.menu.exec(ev.globalPos())
 
     def save_as(self):
-        if self.path:
+        if self.path.endswith(".gif"):
             default = os.path.basename(self.path)
         else:
             default = generate_name() + ".jpg"
@@ -181,7 +183,7 @@ class SingleImage(QLabel):
             filter=f"{filters[ext]};;All files (*.*)"
             )
         if file_name:
-            if self.path:
+            if self.path.endswith(".gif"):
                 shutil.copy(self.path, file_name)
             else:
                 self._pixmap.save(file_name)

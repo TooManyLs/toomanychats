@@ -16,12 +16,11 @@ class ImagePreview(QLabel):
         super().__init__(*args, **kwargs)
         if path == "./public/document.png":
             self.path = path
+            image_reader = QImageReader(self.path)
+            image_reader.setAutoTransform(True)
+            image = image_reader.read()
         else:
-            self.path = compress_image(path, 128, gif_compression=True, 
-                                       temp=True)
-        image_reader = QImageReader(self.path)
-        image_reader.setAutoTransform(True)
-        image = image_reader.read()
+            image = compress_image(path, 128)
         pixmap = QPixmap.fromImage(image)
         self.setPixmap(pixmap)
         self._pixmap = pixmap
