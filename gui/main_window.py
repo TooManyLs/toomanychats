@@ -7,15 +7,16 @@ from configparser import ConfigParser
 
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import (
-    QApplication, 
-    QMainWindow, 
-    QWidget, 
+    QApplication,
+    QMainWindow,
+    QWidget,
     QStackedLayout,
-    )
+)
 from Crypto.PublicKey import RSA
 
 from widgets import EnterWidget, SignIn, SignUp, ChatWidget
 from widgets.components import Overlay
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         config.read("./gui/config.ini")
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
-        
+
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         context.load_verify_locations(cafile="./ssl/cert.pem")
 
@@ -51,14 +52,13 @@ class MainWindow(QMainWindow):
         self.server_pubkey = RSA.import_key(self.s.recv(1024))
         print("[+] Connected.")
 
-
         # Screens' initialization
         self.enter_widget = EnterWidget(self.stacked_layout, self.s, self)
         self.sign_in = SignIn(self.stacked_layout, self.s, self.server_pubkey)
         self.sign_up = SignUp(self.stacked_layout, self.s, self.server_pubkey)
-        self.main_widget = ChatWidget(self.stacked_layout, 
-                                      self.s, self.server_pubkey, 
-                                      self)
+        self.main_widget = ChatWidget(
+            self.stacked_layout, self.s, self.server_pubkey, self
+        )
 
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
         self.main_widget.header.reinit.connect(self.initUI)
@@ -89,14 +89,15 @@ class MainWindow(QMainWindow):
 
     # Keeps dialog in the center of the window
     def moveEvent(self, event):
-        if hasattr(self.main_widget, 'dialog'):
+        if hasattr(self.main_widget, "dialog"):
             parent_geometry = self.geometry()
             self.main_widget.dialog.move(
-                parent_geometry.center() - self.main_widget.dialog.rect().center())
+                parent_geometry.center() - self.main_widget.dialog.rect().center()
+            )
 
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
-    
+
     def dragEnterEvent(self, event):
         if event.source():
             return
@@ -108,20 +109,21 @@ class MainWindow(QMainWindow):
         if event.mimeData().hasUrls() and self.stacked_layout.currentIndex() == 3:
             for url in event.mimeData().urls():
                 if os.path.isdir(url.toLocalFile()):
-                    event.ignore() 
+                    event.ignore()
                     return
             event.acceptProposedAction()
             self.overlay.show()
         else:
             event.ignore()
-        
+
     def dragLeaveEvent(self, event):
         self.overlay.hide()
         return super().dragLeaveEvent(event)
-    
+
     def dropEvent(self, event):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         self.main_widget.attach_file(files)
+
 
 app = QApplication(sys.argv)
 
@@ -130,7 +132,7 @@ window.setStyleSheet(
     """
     QPushButton{color: white;}
     """
-    )
+)
 palette = QPalette()
 palette.setColor(QPalette.ColorRole.Window, QColor("#1e1e1e"))
 palette.setColor(QPalette.ColorRole.WindowText, QColor("white"))

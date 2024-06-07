@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 import os
+from ssl import SSLSocket
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -9,15 +10,17 @@ from PySide6.QtWidgets import (
     QToolButton,
     QMainWindow,
     QDialog,
-    )
+)
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, Signal
 
 from .components import CustomMenu, ServerDialog
 
+
 class EnterWidget(QWidget):
     reinit = Signal()
-    def __init__(self, stacked_layout, s, window):
+
+    def __init__(self, stacked_layout, s: SSLSocket, window):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
@@ -42,11 +45,10 @@ class EnterWidget(QWidget):
             host = self.config.get(server, "host")
             port = self.config.getint(server, "port")
             if server == "Current":
-                self.menu.add_action(f"Current server: {host}:{port}", 
-                                     status=False)
+                self.menu.add_action(f"Current server: {host}:{port}", status=False)
                 self.menu.add_separator()
                 continue
-            
+
             addr = f"{host}:{port} ({server})"
             self.servernames.append(server)
 
@@ -54,8 +56,7 @@ class EnterWidget(QWidget):
 
         self.menu.add_action("Connect to...", self.connect_to)
         self.options.setMenu(self.menu)
-        self.options.setPopupMode(
-            QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.options.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
         buttons = QVBoxLayout()
         buttons.addWidget(self.sign_in_button)
@@ -66,11 +67,11 @@ class EnterWidget(QWidget):
         self.sign_up_button.setMaximumWidth(400)
 
         option = QVBoxLayout()
-        option.addWidget(self.options, 
-                         alignment=Qt.AlignmentFlag.AlignTop 
-                         | Qt.AlignmentFlag.AlignRight
-                         )
-        
+        option.addWidget(
+            self.options,
+            alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight,
+        )
+
         layout.addItem(buttons, 1, 1)
         layout.addItem(option, 0, 2)
 
@@ -119,7 +120,7 @@ class EnterWidget(QWidget):
             }
             #reg:pressed{background-color: #5e5e5e;}
             """
-            )
+        )
 
         self.sign_in_button.clicked.connect(self.on_sign_in_clicked)
         self.sign_up_button.clicked.connect(self.on_sign_up_clicked)
@@ -143,11 +144,10 @@ class EnterWidget(QWidget):
         self.reinit.emit()
 
     def connect_to(self):
-        self.dialog = ServerDialog(server_list=self.servernames ,parent=self)
+        self.dialog = ServerDialog(server_list=self.servernames, parent=self)
         self.main_window.overlay.show()
         parent_geometry = self.window().geometry()
-        self.dialog.move(
-            parent_geometry.center() - self.dialog.rect().center())
+        self.dialog.move(parent_geometry.center() - self.dialog.rect().center())
         self.dialog.exec()
 
     def _on_dialog_finished(self, result, info=[], add=False):
@@ -156,7 +156,7 @@ class EnterWidget(QWidget):
 
         if result == QDialog.DialogCode.Rejected:
             return
-        
+
         addr, new_server = info
         host, port = addr.split(":")
         if add:
@@ -168,12 +168,9 @@ class EnterWidget(QWidget):
 
             with open("./gui/config.ini", "w") as cfg:
                 self.config.write(cfg)
-        
+
         self.change_server(host, port)
-
-
 
     def showEvent(self, event) -> None:
         if isinstance(self.window(), QMainWindow):
             self.main_window.overlay.raise_()
-        

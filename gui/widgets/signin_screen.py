@@ -1,4 +1,5 @@
 from base64 import b64decode
+from ssl import SSLSocket
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -11,6 +12,7 @@ from PySide6.QtGui import QRegularExpressionValidator as Q_reV
 from PySide6.QtCore import QRegularExpression as Q_re, Signal
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
+from Crypto.PublicKey.RSA import RsaKey
 
 from .utils.encryption import (
     decrypt_aes, 
@@ -25,7 +27,7 @@ class AuthError(Exception):
 
 class SignIn(QWidget):
     name_signal = Signal(str)
-    def __init__(self, stacked_layout, s, server_pubkey):
+    def __init__(self, stacked_layout, s: SSLSocket, server_pubkey: RsaKey):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
@@ -150,7 +152,7 @@ class SignIn(QWidget):
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
                     self.name_signal.emit(name)
-            except (FileNotFoundError, AuthError):
+            except (FileNotFoundError, AuthError, ValueError):
                 self.s.send("Fail".encode())
                 self.incorrect.setText(
                     "Failed to authenticate:\nInvalid username or password.")

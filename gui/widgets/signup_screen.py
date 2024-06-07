@@ -1,6 +1,6 @@
 import os
 from base64 import b64encode
-from socket import socket
+from ssl import SSLSocket
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -23,7 +23,7 @@ from .utils.encryption import (
 from .components import TextField
 
 class SignUp(QWidget):
-    def __init__(self, stacked_layout, s: socket, server_pubkey: RsaKey):
+    def __init__(self, stacked_layout, s: SSLSocket, server_pubkey: RsaKey):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
