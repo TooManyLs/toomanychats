@@ -3,7 +3,6 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto.PublicKey.RSA import RsaKey
 from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad, unpad
 from Crypto.Protocol.KDF import PBKDF2
 
 def generate_key(passw: str, salt: bytes, lenght: int = 32) -> bytes:
@@ -17,17 +16,18 @@ def generate_sha256() -> str:
     return hex_hash
 
 def encrypt_aes(msg: bytes, key: bytes | None = None) -> tuple[bytes, bytes]:
-    iv = get_random_bytes(16)
     key = get_random_bytes(32) if not key else key
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    padded_msg = pad(msg, AES.block_size)
-    return iv + cipher.encrypt(padded_msg), key
+    cipher = AES.new(key, AES.MODE_GCM)
+    ciphertext, tag = cipher.encrypt_and_digest(msg)
+    return bytes(cipher.nonce) + ciphertext + tag, key
 
-def decrypt_aes(msg: bytes, key: bytes) -> bytes:
-    iv = msg[:16]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    decrypted_message = cipher.decrypt(msg[16:])
-    return unpad(decrypted_message, AES.block_size)
+def decrypt_aes(encrypted_msg: bytes, key: bytes) -> bytes:
+    nonce = encrypted_msg[:16]
+    tag = encrypted_msg[-16:]
+    ciphertext = encrypted_msg[16:-16]
+    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+    decrypted_message = cipher.decrypt_and_verify(ciphertext, tag)
+    return decrypted_message
 
 def pack_data(msg: tuple[bytes, bytes], public_key: bytes) -> bytes:
     pubkey = RSA.import_key(public_key)
