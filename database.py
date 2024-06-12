@@ -7,6 +7,12 @@ class Users(TypedDict):
     password: bytes
     salt: bytes
     public_key: str
+
+class NoDataFoundError(Exception):
+    """Exception for handling ```None``` returns from database."""
+
+    def __init__(self, message="No data found in the database.") -> None:
+        super().__init__(message)
  
 
 class Connect:
@@ -27,7 +33,7 @@ class Connect:
         if self.conn:
             self.conn.close()
 
-    def get_user(self, name: str) -> Users | None:
+    def get_user(self, name: str) -> Users:
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
             "SELECT * FROM public.users WHERE name = %s", 
@@ -35,16 +41,17 @@ class Connect:
         )
         user = cur.fetchone()
         cur.close()
-        if user:
-            row: Users = {
-                "name": user["name"],
-                "password": user["password"],
-                "salt": user["salt"],
-                "public_key": user["public_key"]
-            }
-            return row
+        if user is None:
+            raise NoDataFoundError
+        row: Users = {
+            "name": user["name"],
+            "password": user["password"],
+            "salt": user["salt"],
+            "public_key": user["public_key"]
+        }
+        return row
     
-    def get_pubkey(self, name: str) -> bytes | None:
+    def get_pubkey(self, name: str) -> bytes:
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
             "SELECT public_key FROM public.users WHERE name = %s", 
@@ -52,8 +59,9 @@ class Connect:
         )
         row = cur.fetchone()
         cur.close()
-        if row:
-            return row[0].encode()
+        if row is None:
+            raise NoDataFoundError
+        return row[0].encode()
 
 
     def get_by_pubkey(self, public_key):
@@ -76,11 +84,11 @@ class Connect:
         return users
 
     def add_user(self, name: str, password: bytes, 
-                 salt: bytes, public_key: bytes) -> None:
+                 salt: bytes, public_key: str) -> None:
         cur = self.conn.cursor()
         cur.execute(
             "INSERT INTO users (name, password, salt, public_key) VALUES (%s, %s, %s, %s)", 
-            (name, psycopg2.Binary(password), psycopg2.Binary(salt), public_key.decode('utf-8'))
+            (name, psycopg2.Binary(password), psycopg2.Binary(salt), public_key)
         )
         self.conn.commit()
         cur.close()
