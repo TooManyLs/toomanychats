@@ -1,5 +1,4 @@
 import os
-from base64 import b64encode
 from ssl import SSLSocket
 
 from PySide6.QtWidgets import (
@@ -197,10 +196,13 @@ class SignUp(QWidget):
             pubkey = rsa_keys.public_key().export_key()
             pvtkey = rsa_keys.export_key()
 
-            data = encrypt_aes((f"{name}|{b64encode(hash).decode('utf-8')}|"
-                               + f"{b64encode(salt).decode('utf-8')}|"
-                               + f"{pubkey.decode('utf-8')}")
-                                .encode('utf-8'))
+            reg_info: list[bytes] = [
+                name.encode(),
+                hash,
+                salt,
+                pubkey
+            ]
+            data = encrypt_aes(b"|".join(reg_info))
             
             self.s.send(pack_data(data, self.server_pubkey))
             ok = self.s.recv(1024).decode('utf-8')
