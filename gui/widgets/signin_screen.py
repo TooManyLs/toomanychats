@@ -1,4 +1,3 @@
-from base64 import b64decode
 from ssl import SSLSocket
 
 from PySide6.QtWidgets import (
@@ -127,33 +126,36 @@ class SignIn(QWidget):
                 and self.name_f.hasAcceptableInput()):
             name = self.name_f.text()
             password = self.pass_f.text()
-
             self.s.send(name.encode())
+            data = self.s.recv(2048)
             try:
-                with open(f"keys/{name}_private.pem", "rb") as f:
-                    my_pvtkey = RSA.import_key(f.read())
-                my_cipher = PKCS1_OAEP.new(my_pvtkey)
-                data = self.s.recv(2048)
                 try:
                     if data.decode() == "failed":
                         raise AuthError
                 except UnicodeDecodeError:
                     pass
+                with open(f"keys/{name}_private.pem", "rb") as f:
+                    my_pvtkey = RSA.import_key(f.read())
+                my_cipher = PKCS1_OAEP.new(my_pvtkey)
+                
                 data, aes, pub = unpack_data(data)
                 aes = my_cipher.decrypt(aes)
-                server_resp = decrypt_aes(data, aes).decode()
-                salt, challenge = server_resp.split("|")
-                key = generate_key(password, b64decode(salt.encode()))
-                response = decrypt_aes(b64decode(challenge.encode()),
-                                       key).decode()
-                if response == "OK":
-                    self.s.send("OK".encode())
+                server_resp = decrypt_aes(data, aes)
+                salt, challenge = server_resp.split(b"|")
+                key = generate_key(password, salt)
+                response = decrypt_aes(challenge, key)
+                if response == b"OK":
+                    self.s.send(b"OK")
                     for f in self.fields:
                         f.clear()
                     self.stacked_layout.setCurrentIndex(3)
-                    self.name_signal.emit(name)
-            except (FileNotFoundError, AuthError, ValueError):
-                self.s.send("Fail".encode())
+                    if self.s.read(7) == b"success":
+                        self.name_signal.emit(name)
+            except ValueError:
+                self.s.send(b"Fail")
+                self.incorrect.setText(
+                    "Failed to authenticate:\nInvalid username or password.")
+            except (FileNotFoundError, AuthError):
                 self.incorrect.setText(
                     "Failed to authenticate:\nInvalid username or password.")
         if not self.pass_f.hasAcceptableInput():
@@ -164,4 +166,5 @@ class SignIn(QWidget):
     def sign_up(self):
         for f in self.fields:
                 f.clear()
+        self.s.send("/signup".encode())
         self.stacked_layout.setCurrentIndex(2)
