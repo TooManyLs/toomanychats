@@ -1,13 +1,14 @@
 import asyncio
 from asyncio.streams import StreamReader, StreamWriter
 import socket
-from base64 import b64encode, b64decode
 import ssl
+from typing import TypedDict
+from getpass import getpass
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
-from database import Connect
+from database import Connect, NoDataFoundError
 from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
                         pack_data, unpack_data,)
 
@@ -15,14 +16,19 @@ SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
 SERVER_RSA = RSA.generate(2048)
 s_cipher = PKCS1_OAEP.new(SERVER_RSA)
-db_pass = input("input database password: ")
+db_pass = getpass("input database password: ")
 
-f_codes = {
+default_code = {
     "admin":\
-    "A408DB8643628EAC4C6474814F347EEA06EB51BE8108D3C461EE5DADE74A17ED"}
+    generate_sha256()}
+print("default_code=", default_code["admin"])
 
-client_sockets = set()
-authenticated_users = {}
+class UserInfo(TypedDict):
+    sock: StreamWriter
+    public_key: bytes
+    friend_code: str
+
+auth_users: dict[str, UserInfo] = {}
 
 async def send_chunks(writer: StreamWriter, data: bytes, 
                       chunk_size: int = 65536) -> None:
@@ -59,149 +65,140 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                 if not data:
                     break
                 msg, aes, pub = unpack_data(data)
-
+                del data
                 if pub != SERVER_RSA.public_key():
                     user = db.get_by_pubkey(pub.export_key().decode())
-                    cli = authenticated_users[user]
+                    cli = auth_users[user]["sock"]
                     cli.write(pack_data((msg, aes), pub.export_key()))
                     continue
                 
                 dec_key = s_cipher.decrypt(aes)
-                for u, cli in authenticated_users.items():
-                    if u == username or cli == writer:
-                        continue
-                    pubkey = db.get_pubkey(u)
-                    if pubkey:
-                        await send_chunks(
-                            cli, 
-                            pack_data((msg, dec_key), pubkey)
-                            )
-                del data, msg
+                for u, info in auth_users.items():
+                    if u != username:
+                        w = info["sock"]
+                        pubkey = info["public_key"]
+                        await send_chunks(w, pack_data((msg, dec_key), pubkey))
+                del msg
             except ValueError:
-                msg = data.decode()
-                await handle_command(msg, reader, writer, username)
+                cmd = data.decode()
+                commands = {
+                    "/code": send_fcode(writer, username)
+                }
+                await commands[cmd]
                 continue
             except TypeError:
                 continue
             except (OSError, ConnectionResetError):
                 print("Socket is closed.")
-                if writer in client_sockets:
-                    client_sockets.remove(writer)
-                del authenticated_users[username]
-                del f_codes[username]
+                del auth_users[username]
                 writer.close()
                 break
 
-async def handle_command(cmd: str, reader: StreamReader, 
-                         writer: StreamWriter, username: str = "") -> None:
-    with Connect(db_pass) as db:
-        hr = "-" * 80
-        if cmd == "/signup":
-            try:
-                data = await reader.read(1024)
-                if data.decode() == "c":
-                    return
-                friend_code, friend = data.decode().split("|")
-                if f_codes[friend] == friend_code:
-                    writer.write("approve".encode())
-            except (KeyError, ValueError):
-                writer.write("reject".encode())
-                return
-            while True:
-                data = await reader.read(2048)
-                try:
-                    if data.decode == "c":
-                        return
-                except UnicodeDecodeError:
-                    pass
-                reg_info, aes, pub = unpack_data(data)
-                aes = s_cipher.decrypt(aes)
-                reg_info = decrypt_aes(reg_info, aes).decode()
-                name, passw, salt, pubkey = reg_info.split("|")
-                if db.get_user(name) is None:
-                    writer.write("[+] You've successfully created an account!"
-                                 .encode())
-                    f_codes[friend] = generate_sha256()
-                    db.add_user(
-                        name,
-                        b64decode(passw.encode()),
-                        b64decode(salt),
-                        pubkey.encode()
-                    )
-                    break
-                else:
-                    writer.write(f"[-] {name} is not available.".encode())
-                    continue
-        elif cmd == "/userlist":
-            user_pub = db.get_pubkey(username)
-            if user_pub is None:
-                return
-            userlist =\
-             f"[Server]\nUser list:\n{hr}\n{"\n".join(authenticated_users.keys())}\n{hr}"
-            writer.write(pack_data(encrypt_aes(userlist.encode()), user_pub))
-        elif cmd == "/code":
-            code = f"{f_codes[username]}"
-            user_pub = db.get_pubkey(username)
-            if user_pub:
-                await send_chunks(
-                    writer, 
-                    pack_data(encrypt_aes(code.encode()), user_pub)
-                    )
+async def send_fcode(writer: StreamWriter, username: str) -> None:
+    code = auth_users[username]["friend_code"]
+    user_pub = auth_users[username]["public_key"]
+    await send_chunks(
+        writer, 
+        pack_data(encrypt_aes(code.encode()), user_pub)
+        )
 
+async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
+    with Connect(db_pass) as db:
+        data = await reader.read(1024)
+        if data == b"c":
+            return
+        friend_code, friend = data.decode().split("|")
+        if not (friend_code == default_code["admin"] and friend == "admin"):           
+            try:
+                if auth_users[friend]["friend_code"] == friend_code:
+                    pass
+            except (KeyError, ValueError):
+                writer.write(b"reject")
+                return
+        writer.write(b"approve")
+        while True:
+            data = await reader.read(2048)
+            if data.decode == b"c":
+                return
+            reg_info, aes, pub = unpack_data(data)
+            aes = s_cipher.decrypt(aes)
+            reg_info = decrypt_aes(reg_info, aes)
+            name, passw, salt, pubkey = reg_info.split(b"|")
+            name = name.decode()
+            pubkey = pubkey.decode()
+            if name == "admin": 
+                writer.write(b"[-]")
+                continue
+            try:
+                db.get_user(name)
+                writer.write(b"[-]")
+                continue
+            except NoDataFoundError:
+                writer.write("[+] You've successfully created an account!"
+                            .encode())
+                if friend != "admin":
+                    auth_users[friend]["friend_code"] = generate_sha256()
+                else:
+                    default_code["admin"] = generate_sha256()
+                db.add_user(
+                    name,
+                    passw,
+                    salt,
+                    pubkey
+                )
+                break
+            
 async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
     with Connect(db_pass) as db:
         cli_addr = writer.get_extra_info('peername')
-        print(f"[+] {cli_addr} connected.")
+        print(f"[+] {cli_addr[0]}:{cli_addr[1]} connected.")
         writer.write(SERVER_RSA.public_key().export_key())
         while True:
             data = await reader.read(1024)
             first_resp = data.decode()
             if not first_resp:
+                print(f"[-] {cli_addr[0]}:{cli_addr[1]} disconnected.")
                 writer.close()
                 break
-            username = ""
             if first_resp == "/signup":
-                await handle_command("/signup", reader, writer)
+                await sign_up(reader, writer)
                 continue
-            elif first_resp == "c":
-                continue
-            else:
-                username = first_resp
-            if not username:
-                data = await reader.read(2048)
-                username = data.decode()
-            user = db.get_user(username)
-            if user and username not in authenticated_users:
-                password = user["password"]
-                salt = user["salt"]
-                user_pub = user["public_key"].encode()
-                challenge, _ = encrypt_aes("OK".encode(), password)       
-                challenge_string =\
-                f"{b64encode(salt).decode()}|{b64encode(challenge).decode()}"
-                writer.write(pack_data(
-                    encrypt_aes(challenge_string.encode()), user_pub
-                    ))
+            username = first_resp
 
-                data = await reader.read(1024)
-                response = data.decode()
-                if response == "OK":
-                    client_sockets.add(writer)
-                    authenticated_users[username] = writer
-                    f_codes[username] = generate_sha256()
-                    print(f"[+] {username} authenticated successfully.")
-                    asyncio.create_task(listen_for_client(reader, writer, username))
-                    break
-                else:
-                    print(f"[-] {username} failed to authenticate.")
-            else:
-                print(f"[-] No such user as {username}." if user is None\
-                       else f"[-] {cli_addr} tries to connect as {username}")
+            if username in auth_users:
+                print(f"[-] {cli_addr} tries to connect as {username}")
                 writer.write("failed".encode())
+                continue
+            try:
+                user = db.get_user(username)
+            except NoDataFoundError:
+                print(f"[-] No such user as {username}.")
+                writer.write("failed".encode())
+                continue
+            password = user["password"]
+            salt = user["salt"]
+            user_pub = user["public_key"].encode()
+            challenge, _ = encrypt_aes(b"OK", password)
+            challenge_string = b"|".join([salt, challenge])
+            writer.write(pack_data(encrypt_aes(challenge_string), user_pub))
+            response = await reader.read(1024)
+            if response != b"OK":
+                print(f"[-] {username} failed to authenticate.")
+                continue
+            auth_users[username] = UserInfo(
+                sock=writer, 
+                public_key=user_pub, 
+                friend_code=generate_sha256()
+                )
+            writer.write(b"success")
+            asyncio.create_task(listen_for_client(reader, writer, username))
+            break
 
 async def main() -> None:
     ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_context.load_cert_chain(certfile='ssl/cert.pem', 
-                                keyfile='ssl/private_key.pem')   
+                                keyfile='ssl/private_key.pem')
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3  
 
     server = await asyncio.start_server(
         handle_client, SERVER_HOST, SERVER_PORT,
@@ -214,9 +211,5 @@ async def main() -> None:
 
     async with server:
         await server.serve_forever()
-
-    for writer in list(client_sockets):
-        writer.close()
-        client_sockets.remove(writer)
 
 asyncio.run(main())
