@@ -30,7 +30,7 @@ class Connect:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.conn:
+        if hasattr(self, "conn"):
             self.conn.close()
 
     def get_user(self, name: str) -> Users:
@@ -64,15 +64,17 @@ class Connect:
         return row[0].encode()
 
 
-    def get_by_pubkey(self, public_key):
-        cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    def get_by_pubkey(self, public_key: bytes) -> str:
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
             "SELECT name FROM public.users WHERE public_key = %s",
-            (public_key.decode('utf-8'))
+            (public_key.decode(),)
         )
         user = cur.fetchone()
+        if user is None:
+            raise NoDataFoundError
         cur.close()
-        return user["name"] if user else None
+        return user[0]
 
     def get_all_users(self):
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
