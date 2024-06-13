@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from asyncio.streams import StreamReader, StreamWriter
 import socket
 import ssl
@@ -7,6 +8,7 @@ from getpass import getpass
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
+from psycopg2 import OperationalError
 
 from database import Connect, NoDataFoundError
 from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
@@ -17,6 +19,13 @@ SERVER_PORT = 5002
 SERVER_RSA = RSA.generate(2048)
 s_cipher = PKCS1_OAEP.new(SERVER_RSA)
 db_pass = getpass("input database password: ")
+# password check
+try:
+    with Connect(db_pass) as db:
+        pass
+except OperationalError as e:
+    print("Password is incorrect!", repr(e), sep="\n")
+    sys.exit()
 
 default_code = {
     "admin":\
