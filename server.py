@@ -67,6 +67,10 @@ async def receive_chunks(reader: StreamReader,
 
 async def listen_for_client(reader: StreamReader, writer: StreamWriter, 
                             username: str) -> None:
+    commands = {
+        "/code": lambda: send_fcode(writer, username)
+    }
+    
     with Connect(db_pass) as db:
         while True:
             try:
@@ -76,7 +80,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                 msg, aes, pub = unpack_data(data)
                 del data
                 if pub != SERVER_RSA.public_key():
-                    user = db.get_by_pubkey(pub.export_key().decode())
+                    user = db.get_by_pubkey(pub.export_key())
                     cli = auth_users[user]["sock"]
                     cli.write(pack_data((msg, aes), pub.export_key()))
                     continue
@@ -89,13 +93,8 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                         await send_chunks(w, pack_data((msg, dec_key), pubkey))
                 del msg
             except ValueError:
-                cmd = data.decode()
-                commands = {
-                    "/code": send_fcode(writer, username)
-                }
-                await commands[cmd]
-                continue
-            except TypeError:
+                cmd = data.decode()            
+                await commands[cmd]()
                 continue
             except (OSError, ConnectionResetError):
                 print("Socket is closed.")
