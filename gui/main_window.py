@@ -24,10 +24,8 @@ class MainWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        try:
+        if hasattr(self, "s") and self.s:
             self.s.close()
-        except AttributeError:
-            pass
 
         self.setWindowTitle("TooManyChats")
         self.overlay = Overlay(self)
@@ -40,17 +38,20 @@ class MainWindow(QMainWindow):
         config.read("./gui/config.ini")
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
-
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         context.load_verify_locations(cafile="./ssl/cert.pem")
+    
+        try:
+            s = socket.socket()
+            self.s = context.wrap_socket(s, server_hostname="toomanychats")
 
-        s = socket.socket()
-        self.s = context.wrap_socket(s, server_hostname="toomanychats")
-
-        print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
-        self.s.connect((SERVER_HOST, SERVER_PORT))
-        self.server_pubkey = RSA.import_key(self.s.recv(1024))
-        print("[+] Connected.")
+            print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
+            self.s.connect((SERVER_HOST, SERVER_PORT))
+            self.server_pubkey = RSA.import_key(self.s.recv(1024))
+            print("[+] Connected.")
+        except ConnectionRefusedError:
+            self.s = None
+            self.server_pubkey = None
 
         # Screens' initialization
         self.enter_widget = EnterWidget(self.stacked_layout, self.s, self)
@@ -61,8 +62,9 @@ class MainWindow(QMainWindow):
         )
 
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
-        self.main_widget.header.reinit.connect(self.initUI)
         self.enter_widget.reinit.connect(self.initUI)
+        if self.s:
+            self.main_widget.header.reinit.connect(self.initUI)
 
         self.stacked_layout.addWidget(self.enter_widget)    # 0
         self.stacked_layout.addWidget(self.sign_in)         # 1
@@ -81,7 +83,8 @@ class MainWindow(QMainWindow):
         atexit.register(self.quit)
 
     def quit(self):
-        self.s.close()
+        if self.s:
+            self.s.close()
 
     def showEvent(self, event):
         self.overlay.resize(self.size())
@@ -138,7 +141,7 @@ palette.setColor(QPalette.ColorRole.Window, QColor("#1e1e1e"))
 palette.setColor(QPalette.ColorRole.WindowText, QColor("white"))
 
 app.setPalette(palette)
-window.resize(1000, 800)
+window.resize(640, 800)
 window.show()
 
 app.exec()

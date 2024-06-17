@@ -22,8 +22,11 @@ from .utils.encryption import (
 from .components import TextField
 
 class SignUp(QWidget):
-    def __init__(self, stacked_layout, s: SSLSocket, server_pubkey: RsaKey):
+    def __init__(self, stacked_layout, s: SSLSocket | None,
+                 server_pubkey: RsaKey | None):
         super().__init__()
+        if s is None or server_pubkey is None:
+            return
         self.stacked_layout = stacked_layout
         self.s = s
         self.server_pubkey = server_pubkey.export_key()

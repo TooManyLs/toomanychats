@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QSpacerItem, QSizePolicy,
                                QFileDialog, QApplication, QDialog,
                                )
-from PySide6.QtGui import Qt, QIcon, QCursor, QImage, QMovie
+from PySide6.QtGui import Qt, QIcon, QCursor, QImage
 from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer, QMimeData
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
@@ -72,9 +72,11 @@ class Worker(QObject):
 
 
 class ChatWidget(QWidget):
-    def __init__(self, stacked_layout, s: SSLSocket, 
-                 server_pubkey: RsaKey , window):
+    def __init__(self, stacked_layout, s: SSLSocket | None, 
+                 server_pubkey: RsaKey | None, window):
         super().__init__()
+        if s is None or server_pubkey is None:
+            return
         self.stacked_layout = stacked_layout
         self.s = s
         self.server_pubkey = server_pubkey.export_key()

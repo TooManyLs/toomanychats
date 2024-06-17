@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QMainWindow,
     QDialog,
+    QLabel,
 )
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, Signal
@@ -20,7 +21,7 @@ from .components import CustomMenu, ServerDialog
 class EnterWidget(QWidget):
     reinit = Signal()
 
-    def __init__(self, stacked_layout, s: SSLSocket, window):
+    def __init__(self, stacked_layout, s: SSLSocket | None, window):
         super().__init__()
         self.stacked_layout = stacked_layout
         self.s = s
@@ -31,9 +32,19 @@ class EnterWidget(QWidget):
         self.sign_in_button = QPushButton("Sign In")
         self.sign_up_button = QPushButton("Sign Up")
         self.sign_up_button.setObjectName("reg")
+        self.no_connection = QLabel("No connection to the server")
+        self.no_connection.setStyleSheet("color: #e03e3e; margin-bottom: 20px")
+        self.no_connection.hide()
+
+        if not self.s:
+            self.sign_in_button.setDisabled(True)
+            self.sign_up_button.setDisabled(True) 
+            self.no_connection.show()
+
         self.options = QToolButton()
         self.options.setFixedSize(30, 30)
         self.options.setIcon(QIcon("./public/options.png"))
+        
 
         self.menu = CustomMenu(offset=True)
 
@@ -59,6 +70,8 @@ class EnterWidget(QWidget):
         self.options.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
         buttons = QVBoxLayout()
+        buttons.addWidget(self.no_connection, 
+                          alignment=Qt.AlignmentFlag.AlignHCenter)
         buttons.addWidget(self.sign_in_button)
         buttons.addSpacing(20)
         buttons.addWidget(self.sign_up_button)
@@ -106,6 +119,10 @@ class EnterWidget(QWidget):
             QPushButton:pressed, QToolButton:pressed{
                 background-color: #5e5e5e;
                 }
+            QPushButton:disabled{
+                background-color: #3e3e3e;
+                color: #808080
+            }
             QToolButton::menu-indicator{
                 image: none;
             }
@@ -129,8 +146,9 @@ class EnterWidget(QWidget):
         self.stacked_layout.setCurrentIndex(1)
 
     def on_sign_up_clicked(self):
-        self.s.send("/signup".encode())
-        self.stacked_layout.setCurrentIndex(2)
+        if self.s:
+            self.s.send("/signup".encode())
+            self.stacked_layout.setCurrentIndex(2)
 
     def change_server(self, host, port):
         """Changes 'Current' section's options and restarts UI."""
