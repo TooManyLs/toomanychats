@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from asyncio.streams import StreamReader, StreamWriter
+from asyncio import IncompleteReadError
 import socket
 import ssl
 from typing import TypedDict
@@ -50,7 +51,10 @@ async def send_chunks(writer: StreamWriter, data: bytes,
 
 async def receive_chunks(reader: StreamReader, 
                          chunk_size: int = 65536) -> bytes:
-    data_length_bytes = await reader.readexactly(4)
+    try:
+        data_length_bytes = await reader.readexactly(4)
+    except IncompleteReadError:
+        return b''
     if data_length_bytes == b'code':
         return b'/code'
     data_length = int.from_bytes(data_length_bytes, 'big')
@@ -76,7 +80,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
             try:
                 data = await receive_chunks(reader)
                 if not data:
-                    break
+                    raise ConnectionResetError
                 msg, aes, pub = unpack_data(data)
                 del data
                 if pub != SERVER_RSA.public_key():
