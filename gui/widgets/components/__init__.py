@@ -8,3 +8,4 @@ from .custom_menu import CustomMenu
 from .textarea import TextArea
 from .textfield import TextField
 from .server_dialog import ServerDialog
+from .video_widget import VideoWidget
