@@ -1,8 +1,8 @@
-from PySide6.QtGui import QPixmap, QPainter
-from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QIcon, QPixmap, QPainter
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 
 class VideoWidget(QVideoWidget):
     def __init__(self, file: str, parent: QWidget) -> None:
@@ -22,6 +22,45 @@ class VideoWidget(QVideoWidget):
 
         self.source_width = 100
         self.source_height = 100
+
+        self.controls = QVBoxLayout(self)
+        self.playpause = QPushButton()
+        self.playpause.setFixedSize(40, 40)
+        self.playpause.clicked.connect(self.play_pause_toggle)
+        self.__round_corners(self.playpause, 20)
+        self.playpause.hide()
+
+
+        self.playpause.setStyleSheet("background-color: #2e2e2e;")
+
+        self.controls.addWidget(self.playpause, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.playpause.hide)
+
+    def __round_corners(self, widget: QWidget, radius: float):
+        mask = QPixmap(widget.size())
+        mask.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(mask)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(Qt.GlobalColor.black)
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        painter.drawRoundedRect(widget.rect(), radius, radius)
+        painter.end()
+        widget.setMask(mask.mask())
+        
+    def play_pause_toggle(self):
+        self.timer.stop()
+        if self.player.isPlaying():
+            self.player.pause()
+            self.playpause.setIcon(QIcon("./public/play.png"))
+        else:
+            self.player.play()
+            self.playpause.setIcon(QIcon("./public/pause.png"))
+        self.playpause.show()
+        self.timer.start(3000)
 
     def compute_size(self):
         parent_width = self.par.width()
