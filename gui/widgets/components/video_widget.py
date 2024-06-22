@@ -64,6 +64,7 @@ class VideoWidget(QVideoWidget):
 
     def compute_size(self):
         parent_width = self.par.width()
+        old_size = self.size()
 
         aspect_ratio = self.source_height / self.source_width
         new_width = min(parent_width * 0.8, 500, self.source_width)
@@ -75,16 +76,8 @@ class VideoWidget(QVideoWidget):
 
         self.setFixedSize(int(new_width), int(new_height))
 
-        mask = QPixmap(self.size())
-        mask.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(mask)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(Qt.GlobalColor.black)
-        painter.setPen(Qt.PenStyle.NoPen)
-
-        painter.drawRoundedRect(self.rect(), 12, 12)
-        painter.end()
-        self.setMask(mask.mask())
+        if self.size() != old_size:
+            self.__round_corners(self, 12)
 
     def handleMediaStatus(self, status):
         if status == QMediaPlayer.MediaStatus.LoadedMedia: 
@@ -108,10 +101,7 @@ class VideoWidget(QVideoWidget):
         pos = event.scenePosition()
         x_in = True if pos.x() > 0 and pos.x() <= self.width() else False
         y_in = True if pos.y() > 0 and pos.y() <= self.height() else False
-        if not x_in or not y_in:
+        if not x_in or not y_in or event.button() != Qt.MouseButton.LeftButton:
             return super().mouseReleaseEvent(event)
-        if self.player.isPlaying():
-            self.player.pause()
-        else:
-            self.player.play()
+        self.play_pause_toggle()
         return super().mouseReleaseEvent(event)
