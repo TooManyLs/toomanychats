@@ -1,3 +1,5 @@
+import os
+
 import psycopg2
 import psycopg2.extras
 from typing import TypedDict
@@ -16,14 +18,11 @@ class NoDataFoundError(Exception):
  
 
 class Connect:
-    def __init__(self, password):
-        self.password = password
-
     def __enter__(self):
         self.conn = psycopg2.connect(
         database="Chat-project", 
         user="postgres", 
-        password=self.password, 
+        password=os.getenv("DB_PASS"), 
         host="localhost", 
         port="5432"
         )

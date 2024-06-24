@@ -1,15 +1,13 @@
 import asyncio
-import sys
+
 from asyncio.streams import StreamReader, StreamWriter
 from asyncio import IncompleteReadError
 import socket
 import ssl
 from typing import TypedDict
-from getpass import getpass
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
-from psycopg2 import OperationalError
 
 from database import Connect, NoDataFoundError
 from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
@@ -19,14 +17,6 @@ SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
 SERVER_RSA = RSA.generate(2048)
 s_cipher = PKCS1_OAEP.new(SERVER_RSA)
-db_pass = getpass("input database password: ")
-# password check
-try:
-    with Connect(db_pass) as db:
-        pass
-except OperationalError as e:
-    print("Password is incorrect!", repr(e), sep="\n")
-    sys.exit()
 
 default_code = {
     "admin":\
@@ -75,7 +65,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
         "/code": lambda: send_fcode(writer, username)
     }
     
-    with Connect(db_pass) as db:
+    with Connect() as db:
         while True:
             try:
                 data = await receive_chunks(reader)
@@ -115,7 +105,7 @@ async def send_fcode(writer: StreamWriter, username: str) -> None:
         )
 
 async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
-    with Connect(db_pass) as db:
+    with Connect() as db:
         data = await reader.read(1024)
         if data == b"c":
             return
@@ -161,7 +151,7 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
                 break
             
 async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
-    with Connect(db_pass) as db:
+    with Connect() as db:
         cli_addr = writer.get_extra_info('peername')
         print(f"[+] {cli_addr[0]}:{cli_addr[1]} connected.")
         writer.write(SERVER_RSA.public_key().export_key())
