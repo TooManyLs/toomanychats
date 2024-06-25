@@ -20,11 +20,11 @@ class NoDataFoundError(Exception):
 class Connect:
     def __enter__(self):
         self.conn = psycopg2.connect(
-        database="Chat-project", 
-        user="postgres", 
-        password=os.getenv("DB_PASS"), 
-        host="localhost", 
-        port="5432"
+            database="Chat-project", 
+            user="postgres", 
+            password=os.getenv("DB_PASS"), 
+            host="localhost", 
+            port="5432"
         )
         return self
 

@@ -22,14 +22,21 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.setWindowTitle("TooManyChats")
+     
+        self.overlay = Overlay(self)
+        self.overlay.hide()     
+        self.overlay.setParent(self)
+        self.overlay.resize(self.size())
+
+        self.setMinimumWidth(400)
+        self.setMinimumHeight(600)
+
+        atexit.register(self.quit)
 
     def initUI(self):
         if hasattr(self, "s") and self.s:
             self.s.close()
-
-        self.setWindowTitle("TooManyChats")
-        self.overlay = Overlay(self)
-        self.overlay.hide()
 
         self.stacked_layout = QStackedLayout()
 
@@ -74,13 +81,6 @@ class MainWindow(QMainWindow):
         container = QWidget()
         container.setLayout(self.stacked_layout)
         self.setCentralWidget(container)
-        self.setMinimumWidth(400)
-        self.setMinimumHeight(600)
-
-        self.overlay.setParent(self)
-        self.overlay.resize(self.size())
-
-        atexit.register(self.quit)
 
     def quit(self):
         if self.s:
