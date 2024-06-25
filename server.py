@@ -181,7 +181,7 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
             salt = user["salt"]
             user_pub = user["public_key"].encode()
             challenge, _ = encrypt_aes(b"OK", password)
-            challenge_string = b"|".join([salt, challenge])
+            challenge_string = b"<SEP>".join([salt, challenge])
             writer.write(pack_data(encrypt_aes(challenge_string), user_pub))
             response = await reader.read(1024)
             if response != b"OK":

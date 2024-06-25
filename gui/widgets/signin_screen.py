@@ -144,7 +144,7 @@ class SignIn(QWidget):
                 data, aes, pub = unpack_data(data)
                 aes = my_cipher.decrypt(aes)
                 server_resp = decrypt_aes(data, aes)
-                salt, challenge = server_resp.split(b"|")
+                salt, challenge = server_resp.split(b"<SEP>")
                 key = generate_key(password, salt)
                 response = decrypt_aes(challenge, key)
                 if response == b"OK":
