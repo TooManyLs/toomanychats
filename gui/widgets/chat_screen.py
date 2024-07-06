@@ -23,7 +23,7 @@ from .utils.encryption import (
 from .utils.tools import compress_image, qimage_to_bytes, generate_name
 from .components import (TextBubble, SingleImage, ScrollArea,
                          DocAttachment,AttachDialog,ChatHeader,
-                         TextArea)
+                         TextArea, VideoWidget)
 
 class Worker(QObject):
     finished = Signal()
@@ -185,7 +185,10 @@ class ChatWidget(QWidget):
             path = f"./cache/attachments/{ext}"
             with open(path, 'wb') as file:
                 file.write(msg)
-            doc = DocAttachment(f"./cache/attachments/{ext}")
+            if ext[-4:] == ".mp4":
+                doc = VideoWidget(path, self)
+            else:
+                doc = DocAttachment(f"./cache/attachments/{ext}")
             doc.setFocusProxy(self.send_field)
             self.chat_layout.addWidget(doc, 
                                        alignment=Qt.AlignmentFlag.AlignLeft)
@@ -228,7 +231,7 @@ class ChatWidget(QWidget):
                 self, "Choose Files", 
                 filter="All files (*.*)")
         if files:
-            self.dialog = AttachDialog(self, files=files)
+            self.dialog = AttachDialog(files, self)
             self.main_window.overlay.show()
             self.dialog.show()
 
@@ -251,7 +254,10 @@ class ChatWidget(QWidget):
                 attachment = SingleImage(f)
             else:
                 args = (f, False)
-                attachment = DocAttachment(f)
+                if os.path.splitext(f)[1] == ".mp4":
+                    attachment = VideoWidget(f, self)
+                else:
+                    attachment = DocAttachment(f)
             self.t = Thread(target=self._send_file, args=args)
             self.t.start()
             attachment.setFocusProxy(self.send_field)
