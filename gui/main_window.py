@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-        context.load_verify_locations(cafile="./ssl/cert.pem")
+        context.load_verify_locations(f"./ssl/servers/{SERVER_HOST}.pem")
     
         try:
             s = socket.socket()
