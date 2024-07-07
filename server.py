@@ -125,8 +125,9 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
             reg_info, aes, pub = unpack_data(data)
             aes = s_cipher.decrypt(aes)
             reg_info = decrypt_aes(reg_info, aes)
-            name, passw, salt, pubkey = reg_info.split(b"|")
+            name, passw, salt, secret, pubkey = reg_info.split(b"|")
             name = name.decode()
+            secret = secret.decode()
             pubkey = pubkey.decode()
             if name == "admin": 
                 writer.write(b"[-]")
