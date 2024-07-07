@@ -63,7 +63,9 @@ class MainWindow(QMainWindow):
         # Screens' initialization
         self.enter_widget = EnterWidget(self.stacked_layout, self.s, self)
         self.sign_in = SignIn(self.stacked_layout, self.s, self.server_pubkey)
-        self.sign_up = SignUp(self.stacked_layout, self.s, self.server_pubkey)
+        self.sign_up = SignUp(
+            self.stacked_layout, self.s, self.server_pubkey, self
+        )
         self.main_widget = ChatWidget(
             self.stacked_layout, self.s, self.server_pubkey, self
         )

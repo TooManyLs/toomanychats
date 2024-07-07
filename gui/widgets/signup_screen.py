@@ -19,17 +19,18 @@ from .utils.encryption import (
     generate_key, 
     pack_data
     )
-from .components import TextField
+from .components import TextField, TOTPDialog
 
 class SignUp(QWidget):
     def __init__(self, stacked_layout, s: SSLSocket | None,
-                 server_pubkey: RsaKey | None):
+                 server_pubkey: RsaKey | None, window):
         super().__init__()
         if s is None or server_pubkey is None:
             return
         self.stacked_layout = stacked_layout
         self.s = s
         self.server_pubkey = server_pubkey.export_key()
+        self.main_window = window
 
         self.main_layout = QGridLayout()
         self.back = QVBoxLayout()
@@ -195,6 +196,12 @@ class SignUp(QWidget):
                 and password == confirm):
             salt = os.urandom(16)
             hash = generate_key(password, salt)
+            self.secret = None
+            self.totp(name)
+            if not self.secret:
+                print("boo")
+                return
+
             rsa_keys = RSA.generate(2048)
             pubkey = rsa_keys.public_key().export_key()
             pvtkey = rsa_keys.export_key()
@@ -203,6 +210,7 @@ class SignUp(QWidget):
                 name.encode(),
                 hash,
                 salt,
+                self.secret,
                 pubkey
             ]
             data = encrypt_aes(b"|".join(reg_info))
@@ -225,3 +233,10 @@ class SignUp(QWidget):
             self.inv_n.setText("Invalid name (3-20 characters)")
         if not self.pass_f.hasAcceptableInput():
             self.inv_p.setText("Invalid password (8-50 characters)")
+
+    def totp(self, name: str):
+        server_addr = self.s.getpeername()[0]
+        self.dialog = TOTPDialog(name, server_addr, self)
+        self.main_window.overlay.show()
+        self.dialog.exec()
+        self.dialog.deleteLater()
