@@ -1,23 +1,18 @@
 from PySide6.QtCore import Qt, QRegularExpression as Q_re
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QSpacerItem, QSizePolicy,
-    QLabel,
+    QVBoxLayout, QHBoxLayout, QPushButton, 
+    QSpacerItem, QSizePolicy, QLabel,
     )
-from PySide6.QtGui import (
-    QColor, QPainter, QPainterPath, 
-    QBrush, QPen, QRegularExpressionValidator as Q_reV
-    )
+from PySide6.QtGui import QRegularExpressionValidator as Q_reV
 
-from . import TextField
+from . import TextField, Dialog
 
-
-class ServerDialog(QDialog):
-    def __init__(self, server_list, parent=None) -> None:
+class ServerDialog(Dialog):
+    def __init__(self, server_list, parent) -> None:
         super().__init__(parent)
         self.server_list = server_list
-        self.setWindowFlag(Qt.FramelessWindowHint, True)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.d_parent = parent
+
         self.setGeometry(0, 0, 370, 200)
 
         main = QVBoxLayout(self)
@@ -43,11 +38,11 @@ class ServerDialog(QDialog):
         self.add.setFixedWidth(110)
         self.conn.setFixedWidth(110)
         button_layout.addItem(QSpacerItem(
-            0, 0, QSizePolicy.Expanding, 
-            QSizePolicy.Minimum))
-        button_layout.addWidget(self.cancel, alignment=Qt.AlignRight)
-        button_layout.addWidget(self.add, alignment=Qt.AlignRight)
-        button_layout.addWidget(self.conn, alignment=Qt.AlignRight)
+            0, 0, QSizePolicy.Policy.Expanding, 
+            QSizePolicy.Policy.Minimum))
+        button_layout.addWidget(self.cancel, alignment=Qt.AlignmentFlag.AlignRight)
+        button_layout.addWidget(self.add, alignment=Qt.AlignmentFlag.AlignRight)
+        button_layout.addWidget(self.conn, alignment=Qt.AlignmentFlag.AlignRight)
 
         main.addLayout(button_layout, 1)
 
@@ -95,10 +90,10 @@ class ServerDialog(QDialog):
             )
         
         self.cancel.clicked.connect(self.dialog_reject)
-        self.add.clicked.connect(lambda: self.dialog_connect(add=True))
-        self.conn.clicked.connect(self.dialog_connect)
+        self.add.clicked.connect(lambda: self.dialog_accept(add=True))
+        self.conn.clicked.connect(self.dialog_accept)
 
-    def dialog_connect(self, add=False):
+    def dialog_accept(self, add=False):
         self.inv_addr.setText("")
         self.inv_name.setText("")
         
@@ -110,19 +105,12 @@ class ServerDialog(QDialog):
         if valid_addr and uniq:
             addr = self.server_addr.text()
 
-            self.parent()._on_dialog_finished(QDialog.Accepted, [addr, name], add)
+            self.d_parent._on_dialog_finished(
+                Dialog.DialogCode.Accepted, [addr, name], add)
         if not valid_addr:
             self.inv_addr.setText("Invalid address")
         if not uniq:
             self.inv_name.setText("Server with this name already exists")
 
     def dialog_reject(self):
-        self.parent()._on_dialog_finished(QDialog.Rejected)
-    
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        path = QPainterPath()
-        path.addRoundedRect(self.rect(), 12, 12)
-        painter.fillPath(path, QBrush(QColor("#1e1e1e")))
-        painter.strokePath(path, QPen(Qt.NoPen))
+        self.d_parent._on_dialog_finished(Dialog.DialogCode.Rejected)

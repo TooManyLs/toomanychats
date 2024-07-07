@@ -1,30 +1,14 @@
-from PySide6.QtWidgets import (
-    QDialog, 
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QSpacerItem,
-    QSizePolicy,
-    QLabel, 
-    QCheckBox, 
-    QApplication
-    )
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
+                               QPushButton, QSpacerItem, QSizePolicy, 
+                               QLabel,  QCheckBox,  QApplication,
+                               )
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import (
-    QColor,
-    QDragEnterEvent, 
-    QPainter, 
-    QPainterPath, 
-    QBrush, 
-    QPen,
-    QPixmap,
-    QMovie,
-    QImageReader
-    )
+from PySide6.QtGui import (QColor, QDragEnterEvent, QPixmap, 
+                           QMovie,)
 
 from .scroll_area import ScrollArea
 from .doc_attachment import DocAttachment
+from . import Dialog
 from ..utils.tools import compress_image
 
 picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg', 
@@ -39,12 +23,12 @@ class Overlay(QWidget):
         self.setPalette(QColor(0, 0, 0, 120))
         self.setAutoFillBackground(True)
 
-class AttachDialog(QDialog):
-    def __init__(self, parent=None, files: list[str]=None):
-        super(AttachDialog, self).__init__(parent)
+class AttachDialog(Dialog):
+    def __init__(self, files: list[str], parent):
+        super().__init__(parent)
         self.data = files
-        self.setWindowFlag(Qt.FramelessWindowHint, True)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.d_parent = parent
+
         self.setGeometry(0, 0, 350, 400)
 
         main = QVBoxLayout(self)
@@ -55,7 +39,7 @@ class AttachDialog(QDialog):
         self.scroll_contents = QWidget()
         self.scroll_area.setWidget(self.scroll_contents)
         self.scroll_layout = QVBoxLayout(self.scroll_contents)
-        self.scroll_layout.setAlignment(Qt.AlignTop)
+        self.scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll_layout.setContentsMargins(0,0,0,10)
 
 
@@ -63,11 +47,11 @@ class AttachDialog(QDialog):
         for file in self.data:
             if file.lower().endswith(picture_type):
                 label = self.set_image(file)
-                self.scroll_layout.addWidget(label, alignment=Qt.AlignCenter)
+                self.scroll_layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter)
                 self.attachments.append((label, file, True))
             else:
                 doc = DocAttachment(file, attachment=True)
-                self.scroll_layout.addWidget(doc, alignment=Qt.AlignCenter)
+                self.scroll_layout.addWidget(doc, alignment=Qt.AlignmentFlag.AlignCenter)
                 self.attachments.append((doc, file, False))
 
         main.addWidget(self.scroll_area)
@@ -86,9 +70,12 @@ class AttachDialog(QDialog):
         self.send = QPushButton("Send")
         self.cancel.setFixedWidth(60)
         self.send.setFixedWidth(60)
-        button_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        button_layout.addWidget(self.cancel, alignment=Qt.AlignRight)
-        button_layout.addWidget(self.send, alignment=Qt.AlignRight)
+        button_layout.addItem(
+            QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, 
+                        QSizePolicy.Policy.Minimum)
+        )
+        button_layout.addWidget(self.cancel, alignment=Qt.AlignmentFlag.AlignRight)
+        button_layout.addWidget(self.send, alignment=Qt.AlignmentFlag.AlignRight)
 
         main.addLayout(button_layout, 1)
 
@@ -146,18 +133,15 @@ class AttachDialog(QDialog):
         QTimer.singleShot(1, self.update_geometry)
 
     def update_geometry(self):
-        try:
-            parent = self.parent().parent().parent()
-        except AttributeError:
-            parent = self.parent()
-        window_height = parent.height()
+        window_height = self.d_parent.main_window.height()
         contents = self.scroll_contents.children()[1:]
         offset = 97 if hasattr(self, "compress_img") else 65
         content_height = offset
         for w in contents:
-            content_height += w.height() + 9
+            if isinstance(w, QWidget):
+                content_height += w.height() + 9
         self.setFixedHeight(min(content_height, window_height * 0.9))
-        self.move(parent.geometry().center() - self.rect().center())
+        self.move(self.d_parent.main_window.geometry().center() - self.rect().center())
         
 
     def dialog_accept(self):
@@ -165,22 +149,14 @@ class AttachDialog(QDialog):
         for item in self.attachments:
             _, file, compressed = item
             files.append((file, compressed))
-        self.parent().on_dialog_finished(QDialog.Accepted, files)
+        self.d_parent.on_dialog_finished(Dialog.DialogCode.Accepted, files)
     
     def dialog_reject(self):
-        self.parent().on_dialog_finished(QDialog.Rejected, [])
+        self.d_parent.on_dialog_finished(Dialog.DialogCode.Rejected, [])
 
     def showEvent(self, event):
         QApplication.processEvents()
         QTimer.singleShot(1, self.update_geometry)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        path = QPainterPath()
-        path.addRoundedRect(self.rect(), 12, 12)
-        painter.fillPath(path, QBrush(QColor("#1e1e1e")))
-        painter.strokePath(path, QPen(Qt.NoPen))
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         event.acceptProposedAction()
@@ -199,12 +175,12 @@ class AttachDialog(QDialog):
                 m = _pixmap.height() / 270
             else:
                 m = _pixmap.width() / 300
-            label.setFixedSize(_pixmap.width()/m, _pixmap.height()/m)
+            label.setFixedSize(int(_pixmap.width()/m), int(_pixmap.height()/m))
         else:
             image = compress_image(image_path=path)
             pixmap = QPixmap.fromImage(image)
             pixmap = pixmap.scaled(
-                300, 270, Qt.KeepAspectRatio, 
-                Qt.SmoothTransformation)
+                300, 270, Qt.AspectRatioMode.KeepAspectRatio, 
+                Qt.TransformationMode.SmoothTransformation)
             label.setPixmap(pixmap)
         return label
