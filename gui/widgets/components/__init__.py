@@ -1,3 +1,4 @@
+from .dialog import Dialog
 from .text_bubble import TextBubble
 from .single_image import SingleImage
 from .scroll_area import ScrollArea
