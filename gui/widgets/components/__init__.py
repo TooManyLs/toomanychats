@@ -10,3 +10,4 @@ from .textarea import TextArea
 from .textfield import TextField
 from .server_dialog import ServerDialog
 from .video_widget import VideoWidget
+from .totp_dialog import TOTPDialog
