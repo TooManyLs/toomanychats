@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QVBoxLayout,
     QLabel,
+    QFrame,
     QPushButton,
     )
 from PySide6.QtGui import QRegularExpressionValidator as Q_reV
@@ -18,6 +19,7 @@ from .utils.encryption import (
     generate_key, 
     unpack_data
     )
+from .utils.tools import get_device_id
 from .components import TextField
 
 class AuthError(Exception):
@@ -69,7 +71,31 @@ class SignIn(QWidget):
         form.addWidget(self.incorrect)
         form.addWidget(self.reg)
 
-        layout.addItem(form, 1, 1)
+        self.code_f = TextField("Code:", "#2e2e2e")
+        self.verify_btn = QPushButton("Verify")
+        self.inv_c = QLabel()
+
+        self.code_f.setObjectName("text-field")
+        self.verify_btn.setObjectName("signin")
+        self.inv_c.setObjectName("invalid")
+
+        valid_code = Q_reV(Q_re("[0-9]{6}"))
+        self.code_f.setValidator(valid_code)
+
+        mfa = QVBoxLayout()
+
+        mfa.addWidget(self.code_f)
+        mfa.addWidget(self.inv_c)
+        mfa.addWidget(self.verify_btn)
+
+        self.form_frame = QFrame()
+        self.form_frame.setLayout(form)
+        self.mfa_frame = QFrame()
+        self.mfa_frame.setLayout(mfa)
+        self.mfa_frame.hide()
+
+        layout.addWidget(self.form_frame, 1, 1)
+        layout.addWidget(self.mfa_frame, 1, 1)
 
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
@@ -120,6 +146,7 @@ class SignIn(QWidget):
 
         self.btn.clicked.connect(self.sign_in)
         self.reg.clicked.connect(self.sign_up)
+        self.verify_btn.clicked.connect(self.verify_totp)
 
     def sign_in(self):
         self.inv_n.setText("")
@@ -129,17 +156,21 @@ class SignIn(QWidget):
                 and self.name_f.hasAcceptableInput()):
             name = self.name_f.text()
             password = self.pass_f.text()
-            self.s.send(name.encode())
+            self.s.send(f"{name}<SEP>".encode() + get_device_id(name))
             data = self.s.recv(2048)
             try:
-                try:
-                    if data.decode() == "failed":
-                        raise AuthError
-                except UnicodeDecodeError:
-                    pass
-                with open(f"keys/{name}_private.pem", "rb") as f:
-                    my_pvtkey = RSA.import_key(f.read())
-                my_cipher = PKCS1_OAEP.new(my_pvtkey)
+                if data == b"failed":
+                    raise AuthError
+                if data == b"new device":
+                    rsa = RSA.generate(2048)
+                    self.my_pvtkey = rsa.export_key()
+                    my_pubkey = rsa.public_key().export_key()
+                    self.s.send(my_pubkey)
+                    data = self.s.recv(2048)
+                else:
+                    with open(f"keys/{name}_private.pem", "rb") as f:
+                        self.my_pvtkey = RSA.import_key(f.read())
+                    my_cipher = PKCS1_OAEP.new(self.my_pvtkey)
                 
                 data, aes, pub = unpack_data(data)
                 aes = my_cipher.decrypt(aes)
@@ -149,11 +180,10 @@ class SignIn(QWidget):
                 response = decrypt_aes(challenge, key)
                 if response == b"OK":
                     self.s.send(b"OK")
-                    for f in self.fields:
-                        f.clear()
-                    self.stacked_layout.setCurrentIndex(3)
-                    if self.s.read(7) == b"success":
-                        self.name_signal.emit(name)
+                    self.form_frame.hide()
+                    self.mfa_frame.show()
+
+                    
             except ValueError:
                 self.s.send(b"Fail")
                 self.incorrect.setText(
@@ -165,6 +195,25 @@ class SignIn(QWidget):
             self.inv_p.setText("Invalid password (8-50 characters)")
         if not self.name_f.hasAcceptableInput():
             self.inv_n.setText("Invalid name (3-20 characters)")
+
+    def verify_totp(self):
+        self.inv_c.setText("")
+        if not self.code_f.hasAcceptableInput():
+            self.inv_c.setText("Authentication code should be 6 digits long.")
+            return
+        name = self.name_f.text()
+        otp = self.code_f.text()
+        self.s.send(otp.encode())
+        resp = self.s.read(7)
+        print(resp)
+        if resp == b"failed":
+            self.inv_c.setText("The code is wrong")
+            return
+        elif resp == b"success":
+            self.stacked_layout.setCurrentIndex(3)
+            self.name_signal.emit(name)
+            for f in self.fields:
+                f.clear()
     
     def sign_up(self):
         for f in self.fields:

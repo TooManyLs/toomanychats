@@ -1,5 +1,4 @@
 import asyncio
-
 from asyncio.streams import StreamReader, StreamWriter
 from asyncio import IncompleteReadError
 import socket
@@ -8,6 +7,7 @@ from typing import TypedDict
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
+import pyotp
 
 from database import Connect, NoDataFoundError
 from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
@@ -74,7 +74,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                 msg, aes, pub = unpack_data(data)
                 del data
                 if pub != SERVER_RSA.public_key():
-                    user = db.get_by_pubkey(pub.export_key())
+                    user = db.get_by_pubkey(pub.export_key().decode())
                     cli = auth_users[user]["sock"]
                     cli.write(pack_data((msg, aes), pub.export_key()))
                     continue
@@ -125,10 +125,11 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
             reg_info, aes, pub = unpack_data(data)
             aes = s_cipher.decrypt(aes)
             reg_info = decrypt_aes(reg_info, aes)
-            name, passw, salt, secret, pubkey = reg_info.split(b"|")
+            name, passw, salt, secret, device_id, pubkey = reg_info.split(b"<SEP>")
             name = name.decode()
             secret = secret.decode()
             pubkey = pubkey.decode()
+
             if name == "admin": 
                 writer.write(b"[-]")
                 continue
@@ -147,6 +148,8 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
                     name,
                     passw,
                     salt,
+                    secret,
+                    device_id,
                     pubkey
                 )
                 break
@@ -158,36 +161,64 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
         writer.write(SERVER_RSA.public_key().export_key())
         while True:
             data = await reader.read(1024)
-            first_resp = data.decode()
-            if not first_resp:
+            if not data:
                 print(f"[-] {cli_addr[0]}:{cli_addr[1]} disconnected.")
                 writer.close()
                 break
-            if first_resp == "/signup":
+            if data == b"/signup":
                 await sign_up(reader, writer)
                 continue
-            username = first_resp
+            username, device_id = data.split(b"<SEP>")
+            username = username.decode()
 
             if username in auth_users:
                 print(f"[-] {cli_addr} tries to connect as {username}")
                 writer.write("failed".encode())
                 continue
             try:
-                user = db.get_user(username)
+                user = db.get_user(username, device_id)
             except NoDataFoundError:
                 print(f"[-] No such user as {username}.")
                 writer.write("failed".encode())
                 continue
-            password = user["password"]
-            salt = user["salt"]
-            user_pub = user["public_key"].encode()
+
+            # Get user's public RSA key
+            new_device = False
+            if user[1] == b"0":
+                new_device = True
+                writer.write(b"new device")
+                user_pub = await reader.read(2048)
+            else:
+                # TODO: Handle lost RSA keys.
+                user_pub = user[1].encode()
+
+            # Get info for further authentication
+            password = user[0]["password"]
+            salt = user[0]["salt"]
+            secret = user[0]["totp_secret"]
+
+            # Challenge user
             challenge, _ = encrypt_aes(b"OK", password)
             challenge_string = b"<SEP>".join([salt, challenge])
             writer.write(pack_data(encrypt_aes(challenge_string), user_pub))
             response = await reader.read(1024)
             if response != b"OK":
-                print(f"[-] {username} failed to authenticate.")
+                print(f"[-] {username} failed to authenticate [wrong password].")
                 continue
+
+            while True:
+                if not await verify_totp(reader, writer, secret):
+                    print(f"[-] {username} failed to authenticate [failed TOTP].")
+                    try:
+                        writer.write(b"failed")
+                    except AttributeError:
+                        return
+                    continue
+                break
+
+            if new_device:
+                db.add_device(username, device_id, user_pub.decode())
+
             auth_users[username] = UserInfo(
                 sock=writer, 
                 public_key=user_pub, 
@@ -196,6 +227,13 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
             writer.write(b"success")
             asyncio.create_task(listen_for_client(reader, writer, username))
             break
+
+async def verify_totp(reader: StreamReader, writer: StreamWriter, secret: str) -> bool:
+    totp = pyotp.TOTP(secret)
+    otp = await reader.read(6)
+    if not otp:
+        writer.close()
+    return totp.verify(otp.decode())
 
 async def main() -> None:
     ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)

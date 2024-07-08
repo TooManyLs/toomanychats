@@ -20,6 +20,7 @@ from .utils.encryption import (
     pack_data
     )
 from .components import TextField, TOTPDialog
+from .utils.tools import get_device_id
 
 class SignUp(QWidget):
     def __init__(self, stacked_layout, s: SSLSocket | None,
@@ -201,6 +202,8 @@ class SignUp(QWidget):
             if not self.secret:
                 print("boo")
                 return
+            
+            device_id = get_device_id(name)
 
             rsa_keys = RSA.generate(2048)
             pubkey = rsa_keys.public_key().export_key()
@@ -211,9 +214,10 @@ class SignUp(QWidget):
                 hash,
                 salt,
                 self.secret,
+                device_id,
                 pubkey
             ]
-            data = encrypt_aes(b"|".join(reg_info))
+            data = encrypt_aes(b"<SEP>".join(reg_info))
             
             self.s.send(pack_data(data, self.server_pubkey))
             ok = self.s.recv(1024).decode('utf-8')
