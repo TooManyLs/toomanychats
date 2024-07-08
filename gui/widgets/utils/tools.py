@@ -1,4 +1,5 @@
 import os
+import platform
 import binascii
 from datetime import datetime
 from functools import wraps
@@ -11,12 +12,23 @@ from pillow_heif import register_heif_opener, register_avif_opener
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QImage
 from PySide6.QtCore import QBuffer
+from hashlib import sha256
 
 def generate_name() -> str:
     """Generates random name with timestamp"""
     dust = binascii.hexlify(os.urandom(8)).decode()
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return f"{dust}_{timestamp}"
+
+def get_device_id(name: str) -> bytes:
+    device = platform.uname()
+    system = device.system
+    node = device.node
+    machine = device.machine
+
+    device_str = f"{system}{node}{machine}{name}".encode('utf-8')
+
+    return sha256(device_str).digest()
 
 def cache_check(max_size: int):
     def decorator(func):
