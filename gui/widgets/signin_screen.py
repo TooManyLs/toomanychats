@@ -159,6 +159,7 @@ class SignIn(QWidget):
             self.s.send(f"{name}<SEP>".encode() + get_device_id(name))
             data = self.s.recv(2048)
             try:
+                self.new = False
                 if data == b"failed":
                     raise AuthError
                 if data == b"new device":
