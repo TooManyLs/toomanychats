@@ -162,15 +162,15 @@ class SignIn(QWidget):
                 if data == b"failed":
                     raise AuthError
                 if data == b"new device":
-                    rsa = RSA.generate(2048)
-                    self.my_pvtkey = rsa.export_key()
-                    my_pubkey = rsa.public_key().export_key()
+                    self.new = True
+                    self.my_pvtkey = RSA.generate(2048)
+                    my_pubkey = self.my_pvtkey.public_key().export_key()
                     self.s.send(my_pubkey)
                     data = self.s.recv(2048)
                 else:
                     with open(f"keys/{name}_private.pem", "rb") as f:
                         self.my_pvtkey = RSA.import_key(f.read())
-                    my_cipher = PKCS1_OAEP.new(self.my_pvtkey)
+                my_cipher = PKCS1_OAEP.new(self.my_pvtkey)
                 
                 data, aes, pub = unpack_data(data)
                 aes = my_cipher.decrypt(aes)
@@ -210,6 +210,10 @@ class SignIn(QWidget):
             self.inv_c.setText("The code is wrong")
             return
         elif resp == b"success":
+            if self.new:
+                with open(f"keys/{name}_private.pem", "rb") as f:
+                    f.write(self.my_pvtkey.export_key())
+
             self.stacked_layout.setCurrentIndex(3)
             self.name_signal.emit(name)
             for f in self.fields:
