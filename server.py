@@ -15,6 +15,12 @@ from encryption import (encrypt_aes, decrypt_aes, generate_sha256,
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
+
+ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+ssl_context.load_cert_chain(certfile='ssl/cert.pem', 
+                            keyfile='ssl/private_key.pem')
+ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3  
+
 SERVER_RSA = RSA.generate(2048)
 s_cipher = PKCS1_OAEP.new(SERVER_RSA)
 
@@ -157,8 +163,24 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
 async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
     with Connect() as db:
         cli_addr = writer.get_extra_info('peername')
-        print(f"[+] {cli_addr[0]}:{cli_addr[1]} connected.")
+        print(f"[!] {cli_addr[0]}:{cli_addr[1]} tries to connect.")
+
+        # Sending copy of certificate to the client
+        with open("./ssl/cert.pem", "rb") as f:
+            cert = f.read()
+        writer.write(len(cert).to_bytes(4, "big"))
+        await writer.drain()
+        writer.write(cert)
+
+        try:
+            await writer.start_tls(ssl_context)
+        except ConnectionResetError:
+            print(f"[-] {cli_addr[0]}:{cli_addr[1]} can't establish secure connection.")
+            writer.close()
+            return
+        print(f"[+] {cli_addr[0]}:{cli_addr[1]} secure connection established.")
         writer.write(SERVER_RSA.public_key().export_key())
+
         while True:
             data = await reader.read(1024)
             if not data:
@@ -236,16 +258,10 @@ async def verify_totp(reader: StreamReader, writer: StreamWriter, secret: str) -
     return totp.verify(otp.decode())
 
 async def main() -> None:
-    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    ssl_context.load_cert_chain(certfile='ssl/cert.pem', 
-                                keyfile='ssl/private_key.pem')
-    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3  
-
     server = await asyncio.start_server(
         handle_client, SERVER_HOST, SERVER_PORT,
         family=socket.AF_INET, 
-        reuse_address=True,
-        ssl=ssl_context)
+        reuse_address=True)
 
     addr = server.sockets[0].getsockname()
     print(f"[*] Listening on {addr}")

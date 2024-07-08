@@ -46,17 +46,33 @@ class MainWindow(QMainWindow):
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-        context.load_verify_locations(f"./ssl/servers/{SERVER_HOST}.pem")
+
     
         try:
-            s = socket.socket()
-            self.s = context.wrap_socket(s, server_hostname="toomanychats")
-
+            self.s = socket.socket()
             print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
             self.s.connect((SERVER_HOST, SERVER_PORT))
+            cert_len = int.from_bytes(self.s.recv(4), "big")
+            cert = self.s.recv(cert_len)
+
+            ssl_path = f"./ssl/servers/{SERVER_HOST}.pem"
+            exist = os.path.exists(ssl_path)
+            if exist:
+                with open(ssl_path, "rb") as f:
+                    local_ssl = f.read()
+                if local_ssl != cert:
+                        raise ConnectionRefusedError("SSL certificates doesn't match.")
+            else:
+                with open(ssl_path, "wb") as f:
+                    f.write(cert)
+
+            context.load_verify_locations(ssl_path)
+            self.s = context.wrap_socket(self.s, server_hostname="toomanychats")
+
             self.server_pubkey = RSA.import_key(self.s.recv(1024))
             print("[+] Connected.")
-        except ConnectionRefusedError:
+        except ConnectionRefusedError as e:
+            print(e)
             self.s = None
             self.server_pubkey = None
 
