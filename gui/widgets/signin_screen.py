@@ -211,7 +211,7 @@ class SignIn(QWidget):
             return
         elif resp == b"success":
             if self.new:
-                with open(f"keys/{name}_private.pem", "rb") as f:
+                with open(f"keys/{name}_private.pem", "wb") as f:
                     f.write(self.my_pvtkey.export_key())
 
             self.stacked_layout.setCurrentIndex(3)
