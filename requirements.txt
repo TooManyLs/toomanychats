@@ -4,3 +4,5 @@ psycopg2
 pycryptodome
 pyside6
 cryptography
+pyotp
+qrcode
