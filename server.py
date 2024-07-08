@@ -184,7 +184,7 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
 
             # Get user's public RSA key
             new_device = False
-            if user[1] == b"0":
+            if user[1] == "0":
                 new_device = True
                 writer.write(b"new device")
                 user_pub = await reader.read(2048)
