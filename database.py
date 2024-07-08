@@ -40,9 +40,9 @@ class Connect:
                 COALESCE(uk.public_key, '0') AS public_key
             FROM public."Users" u
             LEFT JOIN public."UserKeys" uk ON u.user_id = uk.user_id
-            WHERE u.name = %s AND uk.device_id = %s
+            AND uk.device_id = %s WHERE u.name = %s 
             """,
-            (name, psycopg2.Binary(device_id))
+            (psycopg2.Binary(device_id), name)
         )
         user = cur.fetchone()
         cur.close()
