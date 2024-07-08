@@ -8,7 +8,7 @@ class Users(TypedDict):
     name: str
     password: bytes
     salt: bytes
-    public_key: str
+    totp_secret: str
 
 class NoDataFoundError(Exception):
     """Exception for handling ```None``` returns from database."""
@@ -31,65 +31,94 @@ class Connect:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if hasattr(self, "conn"):
             self.conn.close()
-
-    def get_user(self, name: str) -> Users:
+    
+    def get_user(self, name: str, device_id: bytes = b"none") -> tuple[Users, str]:
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
-            "SELECT * FROM public.users WHERE name = %s", 
-            (name,)
+            """
+            SELECT u.name, u.password, u.salt, u.totp_secret, 
+                COALESCE(uk.public_key, '0') AS public_key
+            FROM public."Users" u
+            LEFT JOIN public."UserKeys" uk ON u.user_id = uk.user_id
+            WHERE u.name = %s AND uk.device_id = %s
+            """,
+            (name, psycopg2.Binary(device_id))
         )
         user = cur.fetchone()
         cur.close()
+
         if user is None:
             raise NoDataFoundError
-        row: Users = {
+
+        user_data: Users = {
             "name": user["name"],
             "password": user["password"],
             "salt": user["salt"],
-            "public_key": user["public_key"]
+            "totp_secret": user["totp_secret"]
         }
-        return row
+
+        return user_data, user["public_key"]
     
     def get_pubkey(self, name: str) -> bytes:
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
-            "SELECT public_key FROM public.users WHERE name = %s", 
+            """
+            SELECT uk.public_key
+            FROM public."UserKeys" uk
+            JOIN public."Users" u ON uk.user_id = u.user_id
+            WHERE u.name = %s
+            """,
             (name,)
         )
         row = cur.fetchone()
-        cur.close()
         if row is None:
             raise NoDataFoundError
+        
+        cur.close()
         return row[0].encode()
 
 
-    def get_by_pubkey(self, public_key: bytes) -> str:
+    def get_by_pubkey(self, public_key: str) -> str:
         cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute(
-            "SELECT name FROM public.users WHERE public_key = %s",
-            (public_key.decode(),)
+            """
+            SELECT u.name
+            FROM public."UserKeys" uk
+            JOIN public."Users" u ON uk.user_id = u.user_id
+            WHERE uk.public_key = %s
+            """,
+            (public_key,)
         )
         user = cur.fetchone()
         if user is None:
             raise NoDataFoundError
+        
         cur.close()
         return user[0]
 
-    def get_all_users(self):
-        cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT * FROM public.users"
-        )
-        users = cur.fetchall()
-        cur.close()
-        return users
-
-    def add_user(self, name: str, password: bytes, 
-                 salt: bytes, public_key: str) -> None:
+    def add_user(self, name:str, password: bytes, 
+                  salt: bytes, secret: str, 
+                  device_id: bytes, public_key: str) -> None:
         cur = self.conn.cursor()
+
         cur.execute(
-            "INSERT INTO users (name, password, salt, public_key) VALUES (%s, %s, %s, %s)", 
-            (name, psycopg2.Binary(password), psycopg2.Binary(salt), public_key)
+            """INSERT INTO public."Users" (name, password, salt, totp_secret) 
+            VALUES (%s, %s, %s, %s)""",
+            (name, psycopg2.Binary(password), psycopg2.Binary(salt), secret)
+        )
+        self.conn.commit()
+        cur.close()
+
+        self.add_device(name, device_id, public_key)
+        
+
+    def add_device(self, name:str, device_id: bytes, public_key: str) -> None:
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """INSERT INTO public."UserKeys" (device_id, user_id, public_key)
+            VALUES (%s, (SELECT user_id FROM public."Users" WHERE name = %s), %s)""",
+            (psycopg2.Binary(device_id), name, public_key)
         )
         self.conn.commit()
         cur.close()
