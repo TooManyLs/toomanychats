@@ -159,28 +159,44 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
                     pubkey
                 )
                 break
-            
-async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
-    with Connect() as db:
-        cli_addr = writer.get_extra_info('peername')
-        print(f"[!] {cli_addr[0]}:{cli_addr[1]} tries to connect.")
 
-        # Sending copy of certificate to the client
-        with open("./ssl/cert.pem", "rb") as f:
-            cert = f.read()
-        writer.write(len(cert).to_bytes(4, "big"))
-        await writer.drain()
-        writer.write(cert)
+async def secure_connect(writer: StreamWriter) -> tuple[str, int] | None:
+    """Sends SSL certificate copy to a client for comparison or obtaining
+    and starts TLS v1.3 connection.
 
-        try:
-            await writer.start_tls(ssl_context)
-        except ConnectionResetError:
-            print(f"[-] {cli_addr[0]}:{cli_addr[1]} can't establish secure connection.")
-            writer.close()
-            return
+    :param writer:
+    :type writer: ```StreamWriter```
+    :return: returns client's peername tuple (IP address and port) if secure connection established else ```None```
+    :rtype: ```tuple[str, int] | None```
+    """
+
+    cli_addr = writer.get_extra_info('peername')
+    print(f"[!] {cli_addr[0]}:{cli_addr[1]} tries to connect.")
+
+    # Sending copy of certificate to the client
+    with open("./ssl/cert.pem", "rb") as f:
+        cert = f.read()
+    writer.write(len(cert).to_bytes(4, "big"))
+    await writer.drain()
+    writer.write(cert)
+
+    try:
+        await writer.start_tls(ssl_context)
         print(f"[+] {cli_addr[0]}:{cli_addr[1]} secure connection established.")
-        writer.write(SERVER_RSA.public_key().export_key())
+        return cli_addr
+    except ConnectionResetError:
+        print(f"[-] {cli_addr[0]}:{cli_addr[1]} can't establish secure connection.")
+        writer.close()
+        return
 
+async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
+    cli_addr = await secure_connect(writer)
+    if cli_addr is None:
+        return
+
+    writer.write(SERVER_RSA.public_key().export_key())
+
+    with Connect() as db:
         while True:
             data = await reader.read(1024)
             if not data:
