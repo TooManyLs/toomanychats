@@ -34,6 +34,13 @@ class UserInfo(TypedDict):
     public_key: bytes
     friend_code: str
 
+class UserAuthInfo(TypedDict):
+    password: bytes
+    salt: bytes
+    secret: str
+    user_pub: bytes
+    new_device: bool
+
 auth_users: dict[str, UserInfo] = {}
 
 async def send_chunks(writer: StreamWriter, data: bytes, 
@@ -188,6 +195,38 @@ async def secure_connect(writer: StreamWriter) -> tuple[str, int] | None:
         print(f"[-] {cli_addr[0]}:{cli_addr[1]} can't establish secure connection.")
         writer.close()
         return
+    
+async def check_user(writer: StreamWriter, reader: StreamReader, 
+                     username: str, d_id: bytes, cli_addr: tuple[str, int], 
+                     db: Connect) -> UserAuthInfo | None:
+    if username in auth_users:
+        print(f"[-] {cli_addr} tries to connect as {username}")
+        writer.write("failed".encode())
+        return
+    try:
+        user = db.get_user(username, d_id)
+    except NoDataFoundError:
+        print(f"[-] No such user as {username}.")
+        writer.write("failed".encode())
+        return
+
+    # Get user's public RSA key
+    new_device = False
+    if user[1] == "0":
+        new_device = True
+        writer.write(b"new device")
+        user_pub = await reader.read(2048)
+    else:
+        # TODO: Handle lost RSA keys.
+        user_pub = user[1].encode()
+
+    return UserAuthInfo(
+        password=user[0]["password"],
+        salt=user[0]["salt"],
+        secret=user[0]["totp_secret"],
+        user_pub=user_pub,
+        new_device=new_device
+    )
 
 async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
     cli_addr = await secure_connect(writer)
@@ -209,45 +248,26 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
             username, device_id = data.split(b"<SEP>")
             username = username.decode()
 
-            if username in auth_users:
-                print(f"[-] {cli_addr} tries to connect as {username}")
-                writer.write("failed".encode())
-                continue
-            try:
-                user = db.get_user(username, device_id)
-            except NoDataFoundError:
-                print(f"[-] No such user as {username}.")
-                writer.write("failed".encode())
+            user = await check_user(writer, reader, username, 
+                                    device_id, cli_addr, db)
+            if user is None:
                 continue
 
-            # Get user's public RSA key
-            new_device = False
-            if user[1] == "0":
-                new_device = True
-                writer.write(b"new device")
-                user_pub = await reader.read(2048)
-            else:
-                # TODO: Handle lost RSA keys.
-                user_pub = user[1].encode()
-
-            # Get info for further authentication
-            password = user[0]["password"]
-            salt = user[0]["salt"]
-            secret = user[0]["totp_secret"]
+            user_pub = user["user_pub"]
 
             # Challenge user
-            challenge, _ = encrypt_aes(b"OK", password)
-            challenge_string = b"<SEP>".join([salt, challenge])
+            challenge, _ = encrypt_aes(b"OK", user["password"])
+            challenge_string = b"<SEP>".join([user["salt"], challenge])
             writer.write(pack_data(encrypt_aes(challenge_string), user_pub))
             response = await reader.read(1024)
             if response != b"OK":
                 print(f"[-] {username} failed to authenticate [wrong password].")
                 continue
 
-            if not await verify_totp(reader, writer, secret):
+            if not await verify_totp(reader, writer, user["secret"]):
                 return
 
-            if new_device:
+            if user["new_device"]:
                 db.add_device(username, device_id, user_pub.decode())
 
             auth_users[username] = UserInfo(
