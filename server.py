@@ -228,15 +228,8 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
                 print(f"[-] {username} failed to authenticate [wrong password].")
                 continue
 
-            while True:
-                if not await verify_totp(reader, writer, secret):
-                    print(f"[-] {username} failed to authenticate [failed TOTP].")
-                    try:
-                        writer.write(b"failed")
-                    except AttributeError:
-                        return
-                    continue
-                break
+            if not await verify_totp(reader, writer, secret):
+                return
 
             if new_device:
                 db.add_device(username, device_id, user_pub.decode())
@@ -252,10 +245,17 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
 
 async def verify_totp(reader: StreamReader, writer: StreamWriter, secret: str) -> bool:
     totp = pyotp.TOTP(secret)
-    otp = await reader.read(6)
-    if not otp:
-        writer.close()
-    return totp.verify(otp.decode())
+    while True:
+        otp = await reader.read(6)
+        if not otp:
+            writer.close()
+            return False
+        if not totp.verify(otp.decode()):
+            writer.write(b"failed")
+            continue
+        else:
+            return True
+
 
 async def main() -> None:
     server = await asyncio.start_server(
