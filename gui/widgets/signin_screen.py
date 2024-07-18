@@ -8,8 +8,8 @@ from PySide6.QtWidgets import (
     QFrame,
     QPushButton,
     )
-from PySide6.QtGui import QRegularExpressionValidator as Q_reV
-from PySide6.QtCore import QRegularExpression as Q_re, Signal
+from PySide6.QtGui import QKeyEvent, QRegularExpressionValidator as Q_reV
+from PySide6.QtCore import QRegularExpression as Q_re, Signal, Qt
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import RsaKey
@@ -148,6 +148,8 @@ class SignIn(QWidget):
         self.reg.clicked.connect(self.sign_up)
         self.verify_btn.clicked.connect(self.verify_totp)
 
+        self.shown_btn = self.btn
+
     def sign_in(self):
         self.inv_n.setText("")
         self.inv_p.setText("")
@@ -182,6 +184,7 @@ class SignIn(QWidget):
                 if response == b"OK":
                     self.s.send(b"OK")
                     self.form_frame.hide()
+                    self.shown_btn = self.verify_btn
                     self.mfa_frame.show()
 
                     
@@ -206,7 +209,6 @@ class SignIn(QWidget):
         otp = self.code_f.text()
         self.s.send(otp.encode())
         resp = self.s.read(7)
-        print(resp)
         if resp == b"failed":
             self.inv_c.setText("The code is wrong")
             return
@@ -225,3 +227,8 @@ class SignIn(QWidget):
                 f.clear()
         self.s.send("/signup".encode())
         self.stacked_layout.setCurrentIndex(2)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Return:
+            self.shown_btn.click()
+        return super().keyPressEvent(event)

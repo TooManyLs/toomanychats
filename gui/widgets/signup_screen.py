@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QFrame
     )
-from PySide6.QtGui import QRegularExpressionValidator as Q_reV, QIcon
+from PySide6.QtGui import QKeyEvent, QRegularExpressionValidator as Q_reV, QIcon
 from PySide6.QtCore import QRegularExpression as Q_re, Qt
 from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import RsaKey
@@ -158,15 +158,21 @@ class SignUp(QWidget):
         self.check_btn.clicked.connect(self.check_code)
         self.back_btn.clicked.connect(self.go_back)
 
+        self.shown_btn = self.check_btn
+
     def go_back(self):
         self.s.send("c".encode('utf-8'))
         self.form_frame.hide()
+        self.shown_btn = self.check_btn
         self.code_frame.show()
         for f in self.fields:
             f.clear()
         self.stacked_layout.setCurrentIndex(0)
     
     def check_code(self):
+        if not self.friend_code.text() or not self.friend_name.text():
+            self.inv_code.setText("Enter your friend's code and name.")
+            return
         self.inv_code.setText("")
         friend_code = "|".join([
             self.friend_code.text(), 
@@ -178,6 +184,7 @@ class SignUp(QWidget):
             for f in self.fields:
                 f.clear()
             self.code_frame.hide()
+            self.shown_btn = self.btn
             self.form_frame.show()
         else:
             self.inv_code.setText("Invalid friend code.")
@@ -244,3 +251,8 @@ class SignUp(QWidget):
         self.main_window.overlay.show()
         self.dialog.exec()
         self.dialog.deleteLater()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Return:
+            self.shown_btn.click()
+        return super().keyPressEvent(event)

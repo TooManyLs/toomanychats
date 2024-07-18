@@ -11,7 +11,7 @@ class Dialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Escape:
+        if event.key() == Qt.Key.Key_Escape or event.key() == Qt.Key.Key_Return:
             event.ignore()
         else:
             super().keyPressEvent(event)

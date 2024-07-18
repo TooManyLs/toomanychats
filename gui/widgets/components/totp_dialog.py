@@ -170,6 +170,11 @@ class TOTPDialog(Dialog):
         super().showEvent(event)
         parent_geometry = self.d_parent.main_window.geometry()
         self.move(parent_geometry.center() - self.rect().center())
+    
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Return:
+            self.verify.click()
+        return super().keyPressEvent(event)
 
     def dialog_accept(self):
         self.d_parent.secret = self.secret.encode()
