@@ -116,24 +116,35 @@ async def send_fcode(writer: StreamWriter, username: str) -> None:
         writer, 
         pack_data(encrypt_aes(code.encode()), user_pub)
         )
-
-async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
-    with Connect() as db:
+    
+async def check_fcode(reader: StreamReader, writer: StreamWriter) -> str | None:
+    while True:
         data = await reader.read(1024)
         if data == b"c":
             return
         friend_code, friend = data.decode().split("|")
-        if not (friend_code == default_code["admin"] and friend == "admin"):           
-            try:
-                if auth_users[friend]["friend_code"] == friend_code:
-                    pass
-            except (KeyError, ValueError):
-                writer.write(b"reject")
-                return
-        writer.write(b"approve")
+        if friend_code == default_code["admin"] and friend == "admin":           
+            break
+
+        try:
+            if auth_users[friend]["friend_code"] == friend_code:
+                break
+        except (KeyError, ValueError):
+            writer.write(b"reject")
+            continue
+    writer.write(b"approve")
+
+    return friend
+
+async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
+    friend = await check_fcode(reader, writer)
+    if not friend:
+        return
+
+    with Connect() as db:
         while True:
             data = await reader.read(2048)
-            if data.decode == b"c":
+            if not data or data == b"c":
                 return
             reg_info, aes, pub = unpack_data(data)
             aes = s_cipher.decrypt(aes)
