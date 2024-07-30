@@ -13,6 +13,7 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import RsaKey
 from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
+from PIL import UnidentifiedImageError
 
 from .utils.encryption import (
     encrypt_aes, 
@@ -231,7 +232,10 @@ class ChatWidget(QWidget):
                 self, "Choose Files", 
                 filter="All files (*.*)")
         if files:
-            self.dialog = AttachDialog(files, self)
+            try:
+                self.dialog = AttachDialog(files, self)
+            except UnidentifiedImageError:
+                return
             self.main_window.overlay.show()
             self.dialog.show()
 

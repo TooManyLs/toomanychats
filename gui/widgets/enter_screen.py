@@ -63,7 +63,7 @@ class EnterWidget(QWidget):
             addr = f"{host}:{port} ({server})"
             self.servernames.append(server)
 
-            self.menu.add_action(addr, lambda: self.change_server(host, port))
+            self.menu.add_action(addr, lambda _, h=host, p=port: self.change_server(h, p))
 
         self.menu.add_action("Connect to...", self.connect_to)
         self.options.setMenu(self.menu)
