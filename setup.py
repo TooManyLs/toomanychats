@@ -11,7 +11,7 @@ if os.name == 'posix':
 
     pms = {
         'pacman': 'pacman -S',
-        'apt': 'apt update && sudo apt install',
+        'apt': 'apt',
         'yum': 'yum install',
         'rpm': 'rpm -i',
         'dnf': 'dnf install',
