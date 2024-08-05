@@ -23,11 +23,11 @@ choco install postgresql
 call RefreshEnv.cmd
 
 :: Initialize the database cluster
-initdb --locale=C.UTF-8 --encoding=UTF8 -D "C:\Program Files\PostgreSQL\data"
+initdb --locale=English_United States.1252 --encoding=UTF8 -D "C:\Program Files\PostgreSQL\data"
 
 :: Find version of PostgreSQL
 for /f "tokens=3 delims= " %%v in ('psql -V') do (
-    for /f "tokens=1 delims=." %%m in (%%v) do set PG_VER=%%m
+    for /f "tokens=1 delims=." %%m in ('echo %%v') do set PG_VER=%%m
 )
 
 :: Start the PostgreSQL service
