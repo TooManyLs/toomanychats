@@ -34,11 +34,25 @@ for /f "tokens=3 delims= " %%v in ('psql -V') do (
 echo Starting service: postgresql-x64-%PG_VER%
 net start postgresql-x64-%PG_VER%
 
+
+echo Check generated default password for postgres user above
+echo It'll look like that:
+echo WARNING: Generated password: ...
+echo Use it below
+
+:loop1
 :: Set a password on default postgres user and create a new database
 psql -U postgres -c "ALTER ROLE postgres WITH PASSWORD '%DB_PASSWORD%';"
+if %errorlevel% neq 0 (
+    echo Wrong password. Please try again.
+    goto loop1
+)
+
+set PGPASSWORD=%DB_PASSWORD%
 psql -U postgres -c "CREATE DATABASE %DB_NAME% OWNER postgres;"
 
 :: Run the script to create the tables and relationships
 psql -U postgres -d %DB_NAME% -f scripts/script.sql
 
+set PGPASSWORD=
 endlocal
