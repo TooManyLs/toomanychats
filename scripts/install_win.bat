@@ -5,34 +5,40 @@ setlocal
 set DB_PASSWORD=%1
 set DB_NAME=%2
 
-:: Check if Chocolatey is installed
+:: check if user has Chocolatey installed
 where choco >nul 2>nul
 if %errorlevel% neq 0 (
-    echo Installing Chocolatey...
-    @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
-)
+    echo Please install Chocolatey first!
+    echo You can do this by running this command:
+    echo @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+    echo.
+    echo After that open new cmd window and run setup.py again
 
+    exit /b 1
+)
 :: Install PostgreSQL using Chocolatey
 choco install postgresql
 
-:: Find the path to initdb and psql
-for /f "delims=" %%i in ('where initdb') do set INITDB_PATH=%%i
-for /f "delims=" %%i in ('where psql') do set PSQL_PATH=%%i
+:: Refresh environment to get access to initdb and psql commands
+call RefreshEnv.cmd
 
 :: Initialize the database cluster
-"%INITDB_PATH%" --locale=C.UTF-8 --encoding=UTF8 -D "C:\Program Files\PostgreSQL\data"
+initdb --locale=C.UTF-8 --encoding=UTF8 -D "C:\Program Files\PostgreSQL\data"
 
-:: Find and start the PostgreSQL service
-for /f "tokens=*" %%s in ('sc query state^= all ^| findstr /I "postgresql"') do (
-    echo Starting service: %%s
-    net start %%s
+:: Find version of PostgreSQL
+for /f "tokens=3 delims= " %%v in ('psql -V') do (
+    for /f "tokens=1 delims=." %%m in (%%v) do set PG_VER=%%m
 )
 
+:: Start the PostgreSQL service
+echo Starting service: postgresql-x64-%PG_VER%
+net start postgresql-x64-%PG_VER%
+
 :: Set a password on default postgres user and create a new database
-"%PSQL_PATH%" -U postgres -c "ALTER ROLE postgres WITH PASSWORD '%DB_PASSWORD%';"
-"%PSQL_PATH%" -U postgres -c "CREATE DATABASE %DB_NAME% OWNER postgres;"
+psql -U postgres -c "ALTER ROLE postgres WITH PASSWORD '%DB_PASSWORD%';"
+psql -U postgres -c "CREATE DATABASE %DB_NAME% OWNER postgres;"
 
 :: Run the script to create the tables and relationships
-"%PSQL_PATH%" -U postgres -d %DB_NAME% -f script.sql
+psql -U postgres -d %DB_NAME% -f scripts/script.sql
 
 endlocal
