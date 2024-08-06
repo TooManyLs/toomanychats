@@ -107,6 +107,10 @@ class MainWindow(QMainWindow):
             self.main_widget.header.reinit.connect(self.initUI)
 
     def quit(self):
+        # Worker thread termination
+        if hasattr(self.main_widget, "wk_thread"):
+            self.main_widget.wk_thread.quit()
+        # Closing socket
         if self.s:
             self.s.close()
 
