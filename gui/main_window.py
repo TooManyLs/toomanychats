@@ -34,30 +34,37 @@ class MainWindow(QMainWindow):
 
         atexit.register(self.quit)
 
-    def initUI(self):
+    def initUI(self) -> None:
         if hasattr(self, "s") and self.s:
             self.s.close()
-
-        self.stacked_layout = QStackedLayout()
 
         # retrieving host and port from config.ini
         config = ConfigParser()
         config.read("./gui/config.ini")
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
-        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 
-    
+        self.server_connect((SERVER_HOST, SERVER_PORT))
+        self.init_screens()
+
+        container = QWidget()
+        container.setLayout(self.stacked_layout)
+        self.setCentralWidget(container)
+
+    def server_connect(self, addr: tuple[str, int]) -> None:
+
+        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        ssl_path = f"./ssl/servers/{addr[0]}.pem"
+        ssl_exist = os.path.exists(ssl_path)
+
         try:
             self.s = socket.socket()
-            print(f"[*] Connecting to {SERVER_HOST}:{SERVER_PORT}")
-            self.s.connect((SERVER_HOST, SERVER_PORT))
+            print(f"[*] Connecting to {addr[0]}:{addr[1]}")
+            self.s.connect(addr)
             cert_len = int.from_bytes(self.s.recv(4), "big")
             cert = self.s.recv(cert_len)
 
-            ssl_path = f"./ssl/servers/{SERVER_HOST}.pem"
-            exist = os.path.exists(ssl_path)
-            if exist:
+            if ssl_exist:
                 with open(ssl_path, "rb") as f:
                     local_ssl = f.read()
                 if local_ssl != cert:
@@ -76,6 +83,9 @@ class MainWindow(QMainWindow):
             self.s = None
             self.server_pubkey = None
 
+    def init_screens(self) -> None:
+        self.stacked_layout = QStackedLayout()
+
         # Screens' initialization
         self.enter_widget = EnterWidget(self.stacked_layout, self.s, self)
         self.sign_in = SignIn(self.stacked_layout, self.s, self.server_pubkey)
@@ -86,19 +96,15 @@ class MainWindow(QMainWindow):
             self.stacked_layout, self.s, self.server_pubkey, self
         )
 
-        self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
-        self.enter_widget.reinit.connect(self.initUI)
-        if self.s:
-            self.main_widget.header.reinit.connect(self.initUI)
-
         self.stacked_layout.addWidget(self.enter_widget)    # 0
         self.stacked_layout.addWidget(self.sign_in)         # 1
         self.stacked_layout.addWidget(self.sign_up)         # 2
         self.stacked_layout.addWidget(self.main_widget)     # 3
 
-        container = QWidget()
-        container.setLayout(self.stacked_layout)
-        self.setCentralWidget(container)
+        self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
+        self.enter_widget.reinit.connect(self.initUI)
+        if self.s:
+            self.main_widget.header.reinit.connect(self.initUI)
 
     def quit(self):
         if self.s:
