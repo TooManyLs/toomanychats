@@ -3,6 +3,7 @@ import sys
 import atexit
 import socket
 import ssl
+from ssl import SSLSocket
 from configparser import ConfigParser
 
 from PySide6.QtGui import QPalette, QColor
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
 from Crypto.PublicKey import RSA
 
 from widgets import EnterWidget, SignIn, SignUp, ChatWidget
-from widgets.components import Overlay
+from widgets.components import Overlay, ChatRoomList, Splitter
 
 
 class MainWindow(QMainWindow):
@@ -29,7 +30,7 @@ class MainWindow(QMainWindow):
         self.overlay.setParent(self)
         self.overlay.resize(self.size())
 
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(640)
         self.setMinimumHeight(600)
 
         atexit.register(self.quit)
@@ -84,6 +85,9 @@ class MainWindow(QMainWindow):
             self.server_pubkey = None
 
     def init_screens(self) -> None:
+        if not isinstance(self.s, SSLSocket):
+            self.s = None
+
         self.stacked_layout = QStackedLayout()
 
         # Screens' initialization
@@ -96,10 +100,24 @@ class MainWindow(QMainWindow):
             self.stacked_layout, self.s, self.server_pubkey, self
         )
 
-        self.stacked_layout.addWidget(self.enter_widget)    # 0
-        self.stacked_layout.addWidget(self.sign_in)         # 1
-        self.stacked_layout.addWidget(self.sign_up)         # 2
-        self.stacked_layout.addWidget(self.main_widget)     # 3
+        # Create the side panel for chat rooms
+        self.chat_room_list_widget = ChatRoomList(self)
+
+        # Create a QSplitter to hold the sidebar and the main widget
+        self.splitter = Splitter(self)
+        self.splitter.addWidget(self.chat_room_list_widget)
+        self.splitter.addWidget(self.main_widget)
+        self.splitter.setSizes([240, 400])
+        self.splitter.setCollapsible(0, False)
+
+        # Set the minimum widths
+        self.chat_room_list_widget.setMinimumWidth(70)
+        self.main_widget.setMinimumWidth(400)
+
+        self.stacked_layout.addWidget(self.enter_widget)        # 0
+        self.stacked_layout.addWidget(self.sign_in)             # 1
+        self.stacked_layout.addWidget(self.sign_up)             # 2
+        self.stacked_layout.addWidget(self.splitter)            # 3
 
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
         self.enter_widget.reinit.connect(self.initUI)
@@ -128,6 +146,15 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
+        self.chat_room_list_widget.setMaximumWidth(self.width()//2)
+        threshold_width = self.chat_room_list_widget.threshold_width
+        collapsed_width = self.chat_room_list_widget.collapsed_width
+        if self.splitter.sizes()[0] < threshold_width:
+            if not self.chat_room_list_widget.is_collapsed:
+                self.splitter.setSizes([threshold_width, self.width() - threshold_width])
+            else:
+                self.splitter.setSizes([collapsed_width, self.width() - collapsed_width])
+
 
     def dragEnterEvent(self, event):
         if event.source():
@@ -162,6 +189,7 @@ window = MainWindow()
 window.setStyleSheet(
     """
     QPushButton{color: white;}
+    QSplitter{background-color: #161616;}
     """
 )
 palette = QPalette()
