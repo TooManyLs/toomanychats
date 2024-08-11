@@ -12,11 +12,11 @@ class TextArea(QTextEdit):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.one_line_height = self.fontMetrics().lineSpacing()
         self.setMaximumHeight(self.one_line_height * 12 + 12)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.setStyleSheet("background-color: #1e1e1e; color: white;")
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setStyleSheet("background-color: #161616; color: white;")
 
     def compute_height(self):
         doc = QTextDocument(self.toPlainText())
@@ -25,7 +25,7 @@ class TextArea(QTextEdit):
         text_height = doc.size().height() + 4
 
         if text_height <= self.maximumHeight():
-            self.setMinimumHeight(text_height)
+            self.setMinimumHeight(int(text_height))
         else:
             self.setMinimumHeight(self.maximumHeight())
 
@@ -46,7 +46,7 @@ class TextArea(QTextEdit):
         self.textCursor().insertFragment(fragment)
 
     def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key_Return and not event.modifiers() & Qt.ShiftModifier:
+        if event.key() == Qt.Key.Key_Return and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             self.send.emit()
         else:
             super().keyPressEvent(event)

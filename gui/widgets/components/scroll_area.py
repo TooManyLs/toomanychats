@@ -10,7 +10,6 @@ class ScrollArea(QScrollArea):
             """
             QScrollArea{
                 border: none;
-                border-bottom: 1px solid #2e2e2e;
             }
             QScrollBar:vertical {
                 width: 9px;

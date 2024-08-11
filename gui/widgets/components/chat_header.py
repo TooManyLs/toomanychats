@@ -18,7 +18,7 @@ class ChatHeader(QFrame):
     getCode = Signal(str)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.layout = QHBoxLayout(self)
+        self.main = QHBoxLayout(self)
         self.title = QLabel("Chat Room")
         self.options = QToolButton()
         self.options.setFixedSize(30, 30)
@@ -34,19 +34,18 @@ class ChatHeader(QFrame):
                              obj_name="danger", shortcut="Ctrl+Q")
 
         self.options.setMenu(self.menu)
-        self.options.setPopupMode(QToolButton.InstantPopup)
+        self.options.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
-        self.layout.addItem(QSpacerItem(30, 30, QSizePolicy.Policy.Fixed, 
+        self.main.addItem(QSpacerItem(30, 30, QSizePolicy.Policy.Fixed, 
                                         QSizePolicy.Policy.Fixed))
-        self.layout.addWidget(self.title, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.options)
-        self.layout.setContentsMargins(7,7,7,7)
+        self.main.addWidget(self.title, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.main.addWidget(self.options)
+        self.main.setContentsMargins(7,7,7,7)
 
         self.setStyleSheet(
             """
             QFrame{
                 background-color: #161616;
-                border-bottom: 1px solid #2e2e2e;
             }
             QToolButton{
                 border: none;
