@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         self.overlay.setParent(self)
         self.overlay.resize(self.size())
 
-        self.setMinimumWidth(640)
+        self.setMinimumWidth(470)
         self.setMinimumHeight(600)
 
         atexit.register(self.quit)
@@ -146,9 +146,22 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
-        self.chat_room_list_widget.setMaximumWidth(self.width()//2)
         threshold_width = self.chat_room_list_widget.threshold_width
         collapsed_width = self.chat_room_list_widget.collapsed_width
+
+        # Collapse and expand sidebar if it had been constrained by window size
+        if self.width() < 640 and not self.chat_room_list_widget.is_collapsed:
+            self.splitter.on_splitter_moved(collapsed_width, 1)
+            self.chat_room_list_widget.constrained_by_size = True
+        if self.width() >= 640 and self.chat_room_list_widget.constrained_by_size:
+            self.splitter.on_splitter_moved(threshold_width , 1)
+            self.chat_room_list_widget.constrained_by_size = False
+
+        # Set maximum width of the sidebar to half of a widnow width
+        self.chat_room_list_widget.setMaximumWidth(self.width()//2)
+
+        # Keeps the sidebar at a collapsed/threshold width if resizing
+        # the window would cause the sidebar to fall between these values
         if self.splitter.sizes()[0] < threshold_width:
             if not self.chat_room_list_widget.is_collapsed:
                 self.splitter.setSizes([threshold_width, self.width() - threshold_width])

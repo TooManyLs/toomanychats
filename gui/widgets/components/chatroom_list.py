@@ -9,6 +9,7 @@ class ChatRoomList(QWidget):
     def __init__(self, window) -> None:
         super().__init__()
         self.is_collapsed = False
+        self.constrained_by_size = False
         self.main_window = window
         self.list = QVBoxLayout(self)
         self.list.setContentsMargins(0,0,0,0)
@@ -16,6 +17,6 @@ class ChatRoomList(QWidget):
 
         self.list.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
     
-    def collapse_toggle(self, state: bool) -> None:
-        self.is_collapsed = state
-        print("Collapsed" if state else "Expanded")
+    def collapse_toggle(self) -> None:
+        self.is_collapsed = not self.is_collapsed
+        print("Collapsed" if self.is_collapsed else "Expanded")
