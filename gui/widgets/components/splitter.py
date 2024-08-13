@@ -17,7 +17,7 @@ class Splitter(QSplitter):
         collapse_point = collapsed_width * 2
 
         if pos <= threshold_width:
-            if pos > collapse_point:
+            if pos > collapse_point and self.main_window.width() >= 640:
                 self.setSizes([threshold_width, self.width() - threshold_width])
                 if self.main_window.chat_room_list_widget.is_collapsed:
                     self.main_window.chat_room_list_widget.collapse_toggle()
