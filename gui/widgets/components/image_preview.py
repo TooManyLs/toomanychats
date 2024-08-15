@@ -12,22 +12,25 @@ from PySide6.QtGui import (
 from ..utils.tools import compress_image
 
 class ImagePreview(QLabel):
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, path, h=75, w=75, radius=9.5, size=128, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.radius = radius
+        self.h = h
+        self.w = w
         if path == "./public/document.png":
             self.path = path
             image_reader = QImageReader(self.path)
             image_reader.setAutoTransform(True)
             image = image_reader.read()
         else:
-            image = compress_image(path, 128)
+            image = compress_image(path, size)
         pixmap = QPixmap.fromImage(image)
         self.setPixmap(pixmap)
         self._pixmap = pixmap
         self._resized = False
         self.setScaledContents(False)
-        self.setCursor(QCursor(Qt.PointingHandCursor))
-        self.setFixedSize(75, 75)
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.setFixedSize(w, h)
 
         self.counter = 0
 
@@ -40,21 +43,21 @@ class ImagePreview(QLabel):
         super().paintEvent(arg__1)
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         path = QPainterPath()
-        path.addRoundedRect(QRectF(self.rect()), 9.5, 9.5)
+        path.addRoundedRect(QRectF(self.rect()), self.radius, self.radius)
         painter.setClipPath(path)
 
         crop_size = min(self._pixmap.width(), self._pixmap.height())
 
         image = self._pixmap.toImage()
         transform = QTransform()
-        transform = transform.scale(75 / crop_size, 75 / crop_size)
-        image = image.transformed(transform, Qt.SmoothTransformation)
+        transform = transform.scale(self.w / crop_size, self.h / crop_size)
+        image = image.transformed(transform, Qt.TransformationMode.SmoothTransformation)
         pixmap = QPixmap.fromImage(image)
 
-        center_x = (pixmap.width() - 75) // 2
-        center_y = (pixmap.height() - 75) // 2
+        center_x = (pixmap.width() - self.w) // 2
+        center_y = (pixmap.height() - self.h) // 2
 
-        painter.drawPixmap(self.rect(), pixmap, QRect(center_x, center_y, 75, 75))
+        painter.drawPixmap(self.rect(), pixmap, QRect(center_x, center_y, self.w, self.h))
         painter.end()
