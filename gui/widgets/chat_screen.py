@@ -84,10 +84,6 @@ class ChatWidget(QWidget):
         self.main_window = window
 
         self.scroll_area = ScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.horizontalScrollBar().setEnabled(False)
 
         self.chat_area = QWidget()
         self.chat_area.setObjectName("scrollarea")
@@ -312,6 +308,6 @@ class ChatWidget(QWidget):
                 # so we assume that "c" has "compute_size" attribute
                 c.compute_size() #type: ignore
 
-    def showEvent(self, event) -> None:
-        self.main_window.overlay.raise_()
+    # def showEvent(self, event) -> None:
+    #     self.main_window.overlay.raise_()
   
