@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from Crypto.PublicKey import RSA
 
 from widgets import EnterWidget, SignIn, SignUp, ChatWidget
-from widgets.components import Overlay, ChatRoomList, Splitter
+from widgets.components import Overlay, ChatRoomList, Splitter, ScrollArea
 
 
 class MainWindow(QMainWindow):
@@ -103,15 +103,18 @@ class MainWindow(QMainWindow):
         # Create the side panel for chat rooms
         self.chat_room_list_widget = ChatRoomList(self)
 
+        self.scl_area = ScrollArea("#161616")
+        self.scl_area.setWidget(self.chat_room_list_widget)
+        
         # Create a QSplitter to hold the sidebar and the main widget
         self.splitter = Splitter(self)
-        self.splitter.addWidget(self.chat_room_list_widget)
+        self.splitter.addWidget(self.scl_area)
         self.splitter.addWidget(self.main_widget)
         self.splitter.setSizes([240, 400])
-        self.splitter.setCollapsible(0, False)
+        self.splitter.setChildrenCollapsible(False)
 
         # Set the minimum widths
-        self.chat_room_list_widget.setMinimumWidth(70)
+        self.scl_area.setMinimumWidth(70)
         self.main_widget.setMinimumWidth(400)
 
         self.stacked_layout.addWidget(self.enter_widget)        # 0
@@ -158,7 +161,7 @@ class MainWindow(QMainWindow):
             self.chat_room_list_widget.constrained_by_size = False
 
         # Set maximum width of the sidebar to half of a widnow width
-        self.chat_room_list_widget.setMaximumWidth(self.width()//2)
+        self.scl_area.setMaximumWidth(self.width()//2)
 
         # Keeps the sidebar at a collapsed/threshold width if resizing
         # the window would cause the sidebar to fall between these values
