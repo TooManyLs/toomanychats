@@ -34,7 +34,7 @@ class AttachDialog(Dialog):
         main = QVBoxLayout(self)
         main.setSpacing(10)
 
-        self.scroll_area = ScrollArea(self)
+        self.scroll_area = ScrollArea("#1e1e1e")
         self.scroll_area.setWidgetResizable(True)
         self.scroll_contents = QWidget()
         self.scroll_area.setWidget(self.scroll_contents)

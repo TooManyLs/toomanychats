@@ -185,7 +185,7 @@ class ChatWidget(QWidget):
             if ext[-4:] == ".mp4":
                 doc = VideoWidget(path, self)
             else:
-                doc = DocAttachment(f"./cache/attachments/{ext}")
+                doc = DocAttachment(f"./cache/attachments/{ext}", parent=self)
             doc.setFocusProxy(self.send_field)
             self.chat_layout.addWidget(doc, 
                                        alignment=Qt.AlignmentFlag.AlignLeft)
@@ -257,7 +257,7 @@ class ChatWidget(QWidget):
                 if os.path.splitext(f)[1] == ".mp4":
                     attachment = VideoWidget(f, self)
                 else:
-                    attachment = DocAttachment(f)
+                    attachment = DocAttachment(f, parent=self)
             self.t = Thread(target=self._send_file, args=args)
             self.t.start()
             attachment.setFocusProxy(self.send_field)

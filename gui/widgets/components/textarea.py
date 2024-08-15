@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
 from PySide6.QtCore import Qt, QPoint, Signal
 
-from .custom_menu import CustomMenu
+from . import CustomMenu
 
 class TextArea(QTextEdit):
     attach = Signal(list)
