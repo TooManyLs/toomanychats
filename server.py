@@ -1,6 +1,7 @@
 import asyncio
 from asyncio.streams import StreamReader, StreamWriter
 from asyncio import IncompleteReadError
+from configparser import ConfigParser
 import socket
 import ssl
 from typing import TypedDict
@@ -43,6 +44,16 @@ class UserAuthInfo(TypedDict):
 
 auth_users: dict[str, UserInfo] = {}
 
+config = ConfigParser()
+with open('server.conf.enc', 'rb') as f:
+    cfg_enc = f.read()
+    key = input('Enter encryption key: ').rjust(16, '0')[:16]
+    cfg_dec = decrypt_aes(cfg_enc, key=key.encode())
+    config.read_string(cfg_dec.decode())
+
+passwd = config.get('Database', 'DB_PASSWORD')
+db_name = config.get('Database', 'DB_NAME')
+
 async def send_chunks(writer: StreamWriter, data: bytes, 
                       chunk_size: int = 65536) -> None:
     writer.write(len(data).to_bytes(4, 'big'))
@@ -78,7 +89,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
         "/code": lambda: send_fcode(writer, username)
     }
     
-    with Connect() as db:
+    with Connect(passwd, db_name) as db:
         while True:
             try:
                 data = await receive_chunks(reader)
@@ -141,7 +152,7 @@ async def sign_up(reader: StreamReader, writer: StreamWriter) -> None:
     if not friend:
         return
 
-    with Connect() as db:
+    with Connect(passwd, db_name) as db:
         while True:
             data = await reader.read(2048)
             if not data or data == b"c":
@@ -246,7 +257,7 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
 
     writer.write(SERVER_RSA.public_key().export_key())
 
-    with Connect() as db:
+    with Connect(passwd, db_name) as db:
         while True:
             data = await reader.read(1024)
             if not data:

@@ -18,11 +18,15 @@ class NoDataFoundError(Exception):
  
 
 class Connect:
+    def __init__(self, passw: str, name: str) -> None:
+        self.passw = passw
+        self.name = name.lower()
+
     def __enter__(self):
         self.conn = psycopg2.connect(
-            database="Chat-project", 
+            database=self.name, 
             user="postgres", 
-            password=os.getenv("DB_PASS"), 
+            password=self.passw, 
             host="localhost", 
             port="5432"
         )
