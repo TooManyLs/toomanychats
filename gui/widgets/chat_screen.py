@@ -6,6 +6,7 @@ from time import sleep
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QSpacerItem, QSizePolicy,
                                QFileDialog, QApplication, QDialog,
+                               QFrame
                                )
 from PySide6.QtGui import Qt, QIcon, QCursor, QImage
 from PySide6.QtCore import Slot, Signal, QObject, QThread, QTimer, QMimeData
@@ -109,8 +110,13 @@ class ChatWidget(QWidget):
         self.send_field.setObjectName("tarea")
         self.attach.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        inputs = QFrame()
+        inputs.setObjectName("inputs")
         self.setStyleSheet(
             """
+            #inputs{
+                background-color: #161616;
+            }
             QPushButton{
                 border: none;
                 border-radius: 6px;
@@ -137,13 +143,14 @@ class ChatWidget(QWidget):
         input_layout.addWidget(self.attach)
         input_layout.addWidget(self.send_field)
         input_layout.addWidget(self.button)
+        inputs.setLayout(input_layout)
 
         self.header = ChatHeader()
         self.header.getCode.connect(self.on_send)
 
         main_layout.addWidget(self.header)
         main_layout.addWidget(self.scroll_area)
-        main_layout.addLayout(input_layout)
+        main_layout.addWidget(inputs)
 
         self.setLayout(main_layout)
 
@@ -307,7 +314,4 @@ class ChatWidget(QWidget):
                 # All widgets in "chat_area" should be resizable
                 # so we assume that "c" has "compute_size" attribute
                 c.compute_size() #type: ignore
-
-    # def showEvent(self, event) -> None:
-    #     self.main_window.overlay.raise_()
   

@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         # Create the side panel for chat rooms
         self.chat_room_list_widget = ChatRoomList(self)
 
-        self.scl_area = ScrollArea("#161616")
+        self.scl_area = ScrollArea("transparent")
         self.scl_area.setWidget(self.chat_room_list_widget)
         
         # Create a QSplitter to hold the sidebar and the main widget
@@ -126,6 +126,11 @@ class MainWindow(QMainWindow):
         self.enter_widget.reinit.connect(self.initUI)
         if self.s:
             self.main_widget.header.reinit.connect(self.initUI)
+
+        from widgets.components.chatroom_item import ChatRoomItem
+        for x in range(1, 20):
+            chatroom = ChatRoomItem(f"chat Room NO_{x}")
+            self.chat_room_list_widget.list.addWidget(chatroom)
 
     def quit(self):
         # Worker thread termination
