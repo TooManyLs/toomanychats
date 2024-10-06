@@ -26,6 +26,7 @@ from .utils.tools import compress_image, qimage_to_bytes, generate_name
 from .components import (TextBubble, SingleImage, ScrollArea,
                          DocAttachment,AttachDialog,ChatHeader,
                          TextArea, VideoWidget)
+from .message import Sender, MsgType, ChunkSize
 
 class Worker(QObject):
     finished = Signal()
@@ -83,6 +84,7 @@ class ChatWidget(QWidget):
         self.server_pubkey = server_pubkey.export_key()
         self.main_window = window
 
+        self.send = Sender(s, ChunkSize.K64)
         self.scroll_area = ScrollArea()
 
         self.chat_area = QWidget()
