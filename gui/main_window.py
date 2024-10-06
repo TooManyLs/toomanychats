@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
             self.stacked_layout, self.s, self.server_pubkey, self
         )
         self.main_widget = ChatWidget(
-            self.stacked_layout, self.s, self.server_pubkey, self
+            self.s, self.server_pubkey, self
         )
 
         # Create the side panel for chat rooms

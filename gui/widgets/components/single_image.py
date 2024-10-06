@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QMimeData, QUrl, QPoint
 from PySide6.QtGui import (
     QCursor, 
-    QPainter,  
+    QPainter, 
     QPixmap, 
     QMovie,
     QDrag,

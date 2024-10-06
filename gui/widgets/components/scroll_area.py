@@ -38,10 +38,10 @@ class ScrollArea(QScrollArea):
             """
             )
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, arg__1):
         self.old_max = self.verticalScrollBar().maximum()
         self.relative_position = self.verticalScrollBar().value() / self.old_max if self.old_max > 0 else 0
-        super().wheelEvent(event)
+        super().wheelEvent(arg__1)
 
     def handleRangeChanged(self, min, max):
         if self.old_max != max and self.old_max > 0:

@@ -88,7 +88,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
     commands = {
         "/code": lambda: send_fcode(writer, username)
     }
-    
+ 
     with Connect(passwd, db_name) as db:
         while True:
             try:
@@ -102,7 +102,7 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                     cli = auth_users[user]["sock"]
                     cli.write(pack_data((msg, aes), pub.export_key()))
                     continue
-                
+
                 dec_key = s_cipher.decrypt(aes)
                 for u, info in auth_users.items():
                     if u != username:
@@ -111,10 +111,13 @@ async def listen_for_client(reader: StreamReader, writer: StreamWriter,
                         await send_chunks(w, pack_data((msg, dec_key), pubkey))
                 del msg
             except ValueError:
-                cmd = data.decode()            
+                # Commands come in plaintext format so unpack_data is unable
+                # to decrypt not encrypted stream
+                cmd = data.decode()
                 await commands[cmd]()
                 continue
             except (OSError, ConnectionResetError):
+                # Catch exceptions related to client disconnecting
                 print("Socket is closed.")
                 del auth_users[username]
                 writer.close()
@@ -127,14 +130,14 @@ async def send_fcode(writer: StreamWriter, username: str) -> None:
         writer, 
         pack_data(encrypt_aes(code.encode()), user_pub)
         )
-    
+ 
 async def check_fcode(reader: StreamReader, writer: StreamWriter) -> str | None:
     while True:
         data = await reader.read(1024)
         if data == b"c":
             return
         friend_code, friend = data.decode().split("|")
-        if friend_code == default_code["admin"] and friend == "admin":           
+        if friend_code == default_code["admin"] and friend == "admin":
             break
 
         try:
@@ -217,7 +220,7 @@ async def secure_connect(writer: StreamWriter) -> tuple[str, int] | None:
         print(f"[-] {cli_addr[0]}:{cli_addr[1]} can't establish secure connection.")
         writer.close()
         return
-    
+ 
 async def check_user(writer: StreamWriter, reader: StreamReader, 
                      username: str, d_id: bytes, cli_addr: tuple[str, int], 
                      db: Connect) -> UserAuthInfo | None:
