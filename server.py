@@ -11,8 +11,10 @@ from Crypto.Cipher import PKCS1_OAEP
 import pyotp
 
 from database import Connect, NoDataFoundError
-from encryption import (encrypt_aes, decrypt_aes, generate_sha256, 
-                        pack_data, unpack_data,)
+from gui.widgets.utils.encryption import (
+    encrypt_aes, decrypt_aes, generate_sha256,
+    pack_data, unpack_data,
+)
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002

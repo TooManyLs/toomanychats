@@ -4,7 +4,7 @@ import sys
 from configparser import ConfigParser
 from io import StringIO
 
-from encryption import encrypt_aes
+from gui.widgets.utils.encryption import encrypt_aes
 
 
 db_password = input('Enter the password for database: ')
