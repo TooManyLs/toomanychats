@@ -23,11 +23,12 @@ picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg',
 
 class DocAttachment(QFrame):
     def __init__(self, path, name=None, 
-                 attachment=False, parent: QWidget | None = None, 
+                 attachment=False, parent: QWidget | None = None,
+                 timestamp: datetime = datetime.now(),
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.par = parent
-        self.time = datetime.now().strftime("%I:%M %p")
+        self.time = timestamp.strftime("%I:%M %p")
         _, ext = os.path.splitext(path)
         self.filename = os.path.basename(path)
         filesize = os.path.getsize(path)
@@ -91,6 +92,7 @@ class DocAttachment(QFrame):
         self.setStyleSheet(
             """
             QFrame{
+            color: white;
             background-color: #2e2e2e;
             border-radius: 12px;}
             #secondary{color: gray;};
@@ -103,6 +105,8 @@ class DocAttachment(QFrame):
 
         if name:
             self.name = QPushButton(name)
+            self.name.setFixedHeight(23)
+            main_layout.setContentsMargins(5,0,5,5)
             self.name.clicked.connect(lambda: print(f"pushed {name}"))
             name_font = self.name.font()
             name_font.setBold(True)
@@ -111,7 +115,11 @@ class DocAttachment(QFrame):
             self.name.setMaximumWidth(
                 int(metrics.horizontalAdvance(self.name.text()) * 1.4))
             layout.addWidget(self.name)
-            self.name.setStyleSheet("padding-left: 7px; padding-top: 2px;")
+            layout.addItem(
+                QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, 
+                            QSizePolicy.Policy.Minimum))
+            self.name.setStyleSheet("color: white;\
+                    background-color: rgba(0,0,0,0);")
             self.setFixedHeight(103)
         
         self.counter = 0
@@ -152,7 +160,8 @@ class DocAttachment(QFrame):
         self.menu = CustomMenu(self)
         self.menu.add_action("Save as", self.save_as)
         self.menu.add_action("Copy Filename", self.copy_name)
-        self.menu.add_action("Show in Folder", self.show_in_folder)
+        if platform.system() != "Linux":
+            self.menu.add_action("Show in Folder", self.show_in_folder)
         self.menu.add_action("Delete", lambda:self.deleteLater(), 
                         style="color: #e03e3e;")
         self.menu.exec(ev.globalPos())
@@ -186,5 +195,8 @@ class DocAttachment(QFrame):
         QApplication.clipboard().setMimeData(mime_data)
 
     def show_in_folder(self):
-        absolute_path = os.path.abspath(self.path)
-        subprocess.Popen(f'explorer /select,"{absolute_path}"')
+        abspath = os.path.abspath(self.path)
+        if platform.system() == 'Windows':
+            subprocess.Popen(f'explorer /select,"{abspath}"')
+        else:
+            subprocess.Popen(f'open -R "{abspath}"')
