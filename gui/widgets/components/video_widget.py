@@ -1,39 +1,71 @@
+from datetime import datetime
+from typing import Optional
+
 from PySide6.QtGui import QIcon, QPixmap, QPainter
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from PySide6.QtWidgets import QLabel, QWidget, QGridLayout, QPushButton
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PySide6.QtCore import Qt, QSize, QTimer
+from PySide6.QtCore import Qt, QSize, QTimer, QObject
+
+class MediaPlayer(QMediaPlayer):
+    def __init__(
+            self, file: str, video_widget: QVideoWidget,
+            parent: Optional[QObject] = None
+    ) -> None:
+        super().__init__(parent)
+        
+        self.file = file
+        self.setSource(file)
+
+        self.audio = QAudioOutput()
+        self.audio.setVolume(0.5)
+        self.setVideoOutput(video_widget)
+        self.setAudioOutput(self.audio)
 
 class VideoWidget(QVideoWidget):
-    def __init__(self, file: str, parent: QWidget) -> None:
+    def __init__(
+            self, file: str, parent: QWidget,
+            timestamp: datetime = datetime.now()
+    ) -> None:
         super().__init__(parent)
         
         self.file = file
         self.par = parent
-        self.player = QMediaPlayer()
-        self.audio = QAudioOutput()
-        self.audio.setVolume(0.5)
-
-        self.player.setAudioOutput(self.audio)
-        self.player.setVideoOutput(self)
-        self.player.setSource(self.file)
+        self.player = MediaPlayer(file, self)
 
         self.player.mediaStatusChanged.connect(self.handleMediaStatus)
 
         self.source_width = 100
         self.source_height = 100
 
-        self.controls = QVBoxLayout(self)
+        self.controls = QGridLayout(self)
+        self.controls.setContentsMargins(5,5,5,5)
+
         self.playpause = QPushButton()
         self.playpause.setFixedSize(40, 40)
         self.playpause.clicked.connect(self.play_pause_toggle)
         self.__round_corners(self.playpause, 20)
         self.playpause.hide()
 
+        self.time_text = timestamp.strftime("%I:%M %p")
+        self.time = QLabel(self.time_text)
+        self.time.setFixedSize(63, 23)
+        self.__round_corners(self.time, 12)
 
         self.playpause.setStyleSheet("background-color: #2e2e2e;")
+        self.time.setStyleSheet(
+            """
+                background-color: #2e2e2e;
+                padding: 3px;
+                color: white;
+            """
+        )
 
-        self.controls.addWidget(self.playpause, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.controls.addWidget(self.playpause, 1, 1, 2, 3,
+                                alignment=Qt.AlignmentFlag.AlignCenter)
+        self.controls.addWidget(self.time, 2, 3, 1, 1,
+                                alignment=Qt.AlignmentFlag.AlignBottom
+                                | Qt.AlignmentFlag.AlignRight)
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
@@ -105,3 +137,4 @@ class VideoWidget(QVideoWidget):
             return super().mouseReleaseEvent(event)
         self.play_pause_toggle()
         return super().mouseReleaseEvent(event)
+
