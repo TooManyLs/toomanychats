@@ -6,28 +6,27 @@ from datetime import datetime
 import tempfile
 
 from PySide6.QtWidgets import (
-    QVBoxLayout,  
-    QSizePolicy,
-    QLabel,
-    QFileDialog,
-    QApplication
+    QPushButton, QVBoxLayout,  QSizePolicy,
+    QLabel, QFileDialog, QApplication, QWidget,
     )
 from PySide6.QtCore import Qt, QMimeData, QUrl, QPoint
 from PySide6.QtGui import (
-    QCursor, 
-    QPainter, 
-    QPixmap, 
-    QMovie,
-    QDrag,
-    QImage
+    QCursor, QPainter, QPixmap, 
+    QMovie, QDrag, QImage
     )
 
 from .custom_menu import CustomMenu
 from ..utils.tools import compress_image, generate_name
 
+
 class SingleImage(QLabel):
-    def __init__(self, path: QImage | str = "", *args, **kwargs):
+    def __init__(
+            self, parent: QWidget, path: QImage | str = "", name: str = "",
+            timestamp: datetime = datetime.now(), *args, **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
+        self.p = parent
+        self.name = name
         self.temp_file = None
         self.path = path if isinstance(path, str) else ""
         if not path:
@@ -52,10 +51,11 @@ class SingleImage(QLabel):
                 self.setPixmap(self._pixmap)
         self._resized = False
         self.setScaledContents(True)
-        self.setCursor(QCursor(Qt.PointingHandCursor))
-        self.time = datetime.now().strftime("%I:%M %p")
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.time = timestamp.strftime("%I:%M %p")
         self.time_text = QLabel(self.time)
-        self.time_text.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.time_text.setSizePolicy(QSizePolicy.Policy.Minimum,
+                                     QSizePolicy.Policy.Minimum)
         self.time_text.setStyleSheet(
             """
             background-color: rgba(0,0,0,0.4);
@@ -64,30 +64,48 @@ class SingleImage(QLabel):
             border-radius: 10px;
             """
             )
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(5,5,5,5)
+        if self.name:
+            self.name_text = QPushButton(self.name)
+            self.name_text.clicked.connect(lambda: print(f"pushed {self.name}"))
+            self.name_text.setSizePolicy(QSizePolicy.Policy.Minimum,
+                                         QSizePolicy.Policy.Minimum)
+            self.name_text.setStyleSheet(
+                """
+                background-color: rgba(0,0,0,0.4);
+                padding: 3px 5px;
+                color: white;
+                font-weight: 700;
+                border-radius: 10px;
+                """
+                )
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(5,5,5,5)
         
         self.counter = 0
 
     def check_path(self):
-        if not self.path:
+        if not self.path and not isinstance(self._pixmap, QMovie):
             self.path = f"./cache/img/{generate_name()}.jpg"
             self._pixmap.save(self.path)
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.drag_start_position = event.pos()
+    def mousePressEvent(self, ev):
+        if ev.button() == Qt.MouseButton.LeftButton:
+            self.drag_start_position = ev.pos()
 
-    def mouseMoveEvent(self, event):
-        if not (event.buttons() & Qt.LeftButton):
+    def mouseMoveEvent(self, ev):
+        if not (ev.buttons() & Qt.MouseButton.LeftButton):
             return
-        if (event.pos() - self.drag_start_position).manhattanLength() < QApplication.startDragDistance():
+        if ((ev.pos() - self.drag_start_position).manhattanLength()
+            < QApplication.startDragDistance()
+        ):
             return
         drag = QDrag(self)
         mime_data = QMimeData()
 
-        if not os.path.exists(self.path):
-            self.temp_file = tempfile.NamedTemporaryFile(delete=False, delete_on_close=True, suffix=".jpg")
+        if not os.path.exists(self.path) and isinstance(self._pixmap, QImage):
+            self.temp_file = tempfile.NamedTemporaryFile(
+                delete=False, delete_on_close=True, suffix=".jpg"
+            )
             self._pixmap.save(self.temp_file.name, "JPEG")
             self.path = self.temp_file.name
         else:
@@ -96,13 +114,20 @@ class SingleImage(QLabel):
         mime_data.setUrls([QUrl.fromLocalFile(self.path)])
 
         scaled_pixmap = self.pixmap().scaled(
-            128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            128, 128, Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation)
 
         drag.setMimeData(mime_data)
         drag.setPixmap(scaled_pixmap)
-        hotspot = QPoint(scaled_pixmap.width() * 1.5, scaled_pixmap.height())
-        drag.setHotSpot(hotspot - QPoint(scaled_pixmap.width(), scaled_pixmap.height() * 0.5))
-        drag.exec_(Qt.CopyAction | Qt.MoveAction)
+        hotspot = QPoint(
+            int(scaled_pixmap.width() * 1.5),
+            scaled_pixmap.height()
+        )
+        drag.setHotSpot(
+            hotspot - QPoint(scaled_pixmap.width(),
+            int(scaled_pixmap.height() * 0.5))
+        )
+        drag.exec_(Qt.DropAction.CopyAction | Qt.DropAction.MoveAction)
 
     def mouseReleaseEvent(self, ev):
         if self.temp_file:
@@ -110,9 +135,10 @@ class SingleImage(QLabel):
             self.temp_file = None
             self.path = ""
     
-        if ev.button() == Qt.LeftButton:
+        if ev.button() == Qt.MouseButton.LeftButton:
             self.check_path()
             absolute_path = os.path.abspath(self.path)
+            print(absolute_path)
 
             if platform.system() == 'Windows':
                 os.startfile(absolute_path)
@@ -127,7 +153,7 @@ class SingleImage(QLabel):
             pixmap = self._pixmap.currentPixmap()
         else:
             pixmap = self._pixmap
-        parent_width = self.parent().parent().parent().size().width()
+        parent_width = self.p.size().width()
         pw = max(pixmap.width(), 100)
         aspect_ratio = pixmap.height() / pixmap.width()
         new_width = min(parent_width * 0.8, 500, pw)
@@ -137,14 +163,14 @@ class SingleImage(QLabel):
             new_height = 600
             new_width = new_height / aspect_ratio
 
-        self.setFixedSize(new_width, new_height)
+        self.setFixedSize(int(new_width), int(new_height))
 
         mask = QPixmap(self.size())
-        mask.fill(Qt.transparent)
+        mask.fill(Qt.GlobalColor.transparent)
         painter = QPainter(mask)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(Qt.black)
-        painter.setPen(Qt.NoPen)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(Qt.GlobalColor.black)
+        painter.setPen(Qt.PenStyle.NoPen)
 
         painter.drawRoundedRect(self.rect(), 12, 12)
         painter.end()
@@ -154,16 +180,23 @@ class SingleImage(QLabel):
         while self.counter < 1:
             self.compute_size()
             self.counter = 1
-            self.layout.addWidget(self.time_text, 
-                         alignment=Qt.AlignBottom | Qt.AlignRight)
+            if self.name:
+                self.main_layout.addWidget(self.name_text,
+                             alignment=Qt.AlignmentFlag.AlignTop
+                             | Qt.AlignmentFlag.AlignLeft)
+            self.main_layout.addWidget(self.time_text, 
+                         alignment=Qt.AlignmentFlag.AlignBottom
+                                 | Qt.AlignmentFlag.AlignRight)
         return super().resizeEvent(event)
     
     def contextMenuEvent(self, ev) -> None:
         self.menu = CustomMenu(self)
         self.menu.add_action("Save as", self.save_as)
         self.menu.add_action("Copy Image", self.copy)
-        self.menu.add_action("Show in Folder", self.show_in_folder, 
-                             status=bool(self.path))
+        if platform.system() != "Linux":
+            self.menu.add_action("Show in Folder", self.show_in_folder, 
+                                 status=bool(self.path))
+
         self.menu.add_action("Delete", lambda:self.deleteLater(), 
                         style="color: #e03e3e;")
         self.menu.exec(ev.globalPos())
@@ -183,7 +216,7 @@ class SingleImage(QLabel):
             filter=f"{filters[ext]};;All files (*.*)"
             )
         if file_name:
-            if self.path.endswith(".gif"):
+            if isinstance(self._pixmap, QMovie):
                 shutil.copy(self.path, file_name)
             else:
                 self._pixmap.save(file_name)
@@ -191,11 +224,15 @@ class SingleImage(QLabel):
     
     def copy(self):
         clipboard = QApplication.clipboard()
-        image = QPixmap.toImage(self._pixmap.currentPixmap()
-                                if self.path.endswith(".gif") and self.path 
-                                else self._pixmap)
+        pixmap: QPixmap = (self._pixmap.currentPixmap()
+                           if isinstance(self._pixmap, QMovie)
+                           else self._pixmap)
+        image = QPixmap.toImage(pixmap)
         clipboard.setImage(image)
     
     def show_in_folder(self):
         abspath = os.path.abspath(self.path)
-        subprocess.Popen(f'explorer /select,"{abspath}"')
+        if platform.system() == 'Windows':
+            subprocess.Popen(f'explorer /select,"{abspath}"')
+        else:
+            subprocess.Popen(f'open -R "{abspath}"')
