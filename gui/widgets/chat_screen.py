@@ -111,8 +111,8 @@ class ChatWidget(QWidget):
         self.send_field.setObjectName("tarea")
         self.attach.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        inputs = QFrame()
-        inputs.setObjectName("inputs")
+        self.inputs = QFrame()
+        self.inputs.setObjectName("inputs")
         self.setStyleSheet(
             """
             #inputs{
@@ -182,7 +182,7 @@ class ChatWidget(QWidget):
                 path = f"./cache/img/{generate_name()}.gif"
                 with open(path, 'wb') as file:
                     file.write(msg)
-            img = SingleImage(path)
+            img = SingleImage(self, path)
             img.setFocusProxy(self.send_field)
             self.chat_layout.addWidget(img, 
                                        alignment=Qt.AlignmentFlag.AlignLeft)
@@ -259,7 +259,7 @@ class ChatWidget(QWidget):
                     args = (compressed, True)
                 else:
                     args = (f, True)
-                attachment = SingleImage(f)
+                attachment = SingleImage(self, f)
             else:
                 args = (f, False)
                 if os.path.splitext(f)[1] == ".mp4":
