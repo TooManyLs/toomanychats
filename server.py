@@ -2,6 +2,7 @@ import asyncio
 from asyncio.streams import StreamReader, StreamWriter
 from asyncio import IncompleteReadError
 from configparser import ConfigParser
+import os
 import socket
 import ssl
 from typing import TypedDict
@@ -272,7 +273,11 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
             if data == b"/signup":
                 await sign_up(reader, writer)
                 continue
-            username, device_id = data.split(b"<SEP>")
+            unpacked, aes, _ = unpack_data(data)
+            aes = s_cipher.decrypt(aes)
+            name_device = decrypt_aes(unpacked, aes)
+            
+            username, device_id = name_device.split(b"<SEP>")
             username = username.decode()
 
             user = await check_user(writer, reader, username, 
@@ -283,13 +288,16 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
             user_pub = user["user_pub"]
 
             # Challenge user
-            challenge, _ = encrypt_aes(b"OK", user["password"])
+            check_bytestring = os.urandom(32)
+            challenge, _ = encrypt_aes(check_bytestring, user["password"])
             challenge_string = b"<SEP>".join([user["salt"], challenge])
             writer.write(pack_data(encrypt_aes(challenge_string), user_pub))
             response = await reader.read(1024)
-            if response != b"OK":
+            if response != check_bytestring:
+                writer.write(b"failed")
                 print(f"[-] {username} failed to authenticate [wrong password].")
                 continue
+            writer.write(b"passed")
 
             if not await verify_totp(reader, writer, user["secret"]):
                 return
@@ -309,11 +317,14 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
 async def verify_totp(reader: StreamReader, writer: StreamWriter, secret: str) -> bool:
     totp = pyotp.TOTP(secret)
     while True:
-        otp = await reader.read(6)
+        otp = await reader.read(38)
         if not otp:
             writer.close()
             return False
-        if not totp.verify(otp.decode()):
+        verify_otp = totp.now()
+        otp_key = verify_otp.rjust(32, "0")
+        received_otp = decrypt_aes(otp, otp_key.encode()).decode()
+        if not totp.verify(received_otp):
             writer.write(b"failed")
             continue
         else:

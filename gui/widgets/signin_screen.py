@@ -15,9 +15,11 @@ from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import RsaKey
 
 from .utils.encryption import (
+    encrypt_aes,
     decrypt_aes, 
     generate_key, 
-    unpack_data
+    pack_data,
+    unpack_data,
     )
 from .utils.tools import get_device_id
 from .components import TextField
@@ -158,7 +160,11 @@ class SignIn(QWidget):
                 and self.name_f.hasAcceptableInput()):
             name = self.name_f.text()
             password = self.pass_f.text()
-            self.s.send(f"{name}<SEP>".encode() + get_device_id(name))
+            name_device = f"{name}<SEP>".encode() + get_device_id(name) 
+            self.s.send(
+                pack_data(encrypt_aes(name_device),
+                self.server_pubkey.export_key())
+            )
             data = self.s.recv(2048)
             try:
                 self.new = False
@@ -175,19 +181,21 @@ class SignIn(QWidget):
                         self.my_pvtkey = RSA.import_key(f.read())
                 my_cipher = PKCS1_OAEP.new(self.my_pvtkey)
                 
-                data, aes, pub = unpack_data(data)
+                data, aes, _ = unpack_data(data)
                 aes = my_cipher.decrypt(aes)
                 server_resp = decrypt_aes(data, aes)
                 salt, challenge = server_resp.split(b"<SEP>")
                 key = generate_key(password, salt)
-                response = decrypt_aes(challenge, key)
-                if response == b"OK":
-                    self.s.send(b"OK")
-                    self.form_frame.hide()
-                    self.shown_btn = self.verify_btn
-                    self.mfa_frame.show()
+                check_bytestring = decrypt_aes(challenge, key)
+                self.s.send(check_bytestring)
+                resp = self.s.recv(6)
+                if resp != b"passed":
+                    raise AuthError
 
-                    
+                self.form_frame.hide()
+                self.shown_btn = self.verify_btn
+                self.mfa_frame.show()
+
             except ValueError:
                 self.s.send(b"Fail")
                 self.incorrect.setText(
@@ -207,7 +215,9 @@ class SignIn(QWidget):
             return
         name = self.name_f.text()
         otp = self.code_f.text()
-        self.s.send(otp.encode())
+        otp_key = otp.rjust(32, "0").encode()
+        encrypted, _ = encrypt_aes(otp.encode(), key=otp_key)
+        self.s.send(encrypted)
         resp = self.s.read(7)
         if resp == b"failed":
             self.inv_c.setText("The code is wrong")
