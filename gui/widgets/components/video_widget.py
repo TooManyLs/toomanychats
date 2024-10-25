@@ -1,14 +1,20 @@
+import os
+import shutil
+import subprocess
 from datetime import datetime
+import platform
 from typing import Optional
 
 from PySide6.QtGui import QFontMetrics, QIcon, QPixmap, QPainter
 from PySide6.QtWidgets import (
-        QLabel, QWidget, QGridLayout,
-        QPushButton, QSizePolicy,
+        QApplication, QFileDialog, QLabel, QWidget, QGridLayout,
+        QPushButton
 )
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PySide6.QtCore import Qt, QSize, QTimer, QObject
+from PySide6.QtCore import QMimeData, Qt, QSize, QTimer, QObject
+
+from . import CustomMenu
 
 class MediaPlayer(QMediaPlayer):
     def __init__(
@@ -60,12 +66,12 @@ class VideoWidget(QVideoWidget):
         self.time.setObjectName("vid_overlay")
         self.setStyleSheet(
             """
-            #vid_overlay{
+            #vid_overlay, #vid_overlay_btn{
                 background-color: #2e2e2e;
                 padding: 3px;
                 color: white;
             }
-            QPushButton {
+            #vid_overlay_btn {
                 font-weight: 700;
             }
             """
@@ -82,7 +88,7 @@ class VideoWidget(QVideoWidget):
             width = nm_metric.horizontalAdvance(self.name_text) * 1.3
             self.name.setFixedSize(int(width), 23)
             self.__round_corners(self.name, 10)
-            self.name.setObjectName("vid_overlay")
+            self.name.setObjectName("vid_overlay_btn")
 
             self.controls.addWidget(self.name, 0, 0, 1, 1,
                                     alignment=Qt.AlignmentFlag.AlignLeft 
@@ -178,3 +184,40 @@ class VideoWidget(QVideoWidget):
         self.play_pause_toggle()
         return super().mouseReleaseEvent(event)
 
+    def contextMenuEvent(self, event) -> None:
+        self.menu = CustomMenu(self)
+        self.menu.add_action("Save as", self.save_as)
+        self.menu.add_action("Copy filename", self.copy_name)
+        if platform.system() != "Linux":
+            self.menu.add_action("Show in Folder", self.show_in_folder)
+        self.menu.add_action("Delete", lambda:self.deleteLater()
+                             , style="color: #e03e3e;")
+        self.menu.exec(event.globalPos())
+
+    def show_in_folder(self):
+        abspath = os.path.abspath(self.file)
+        if platform.system() == 'Windows':
+            subprocess.Popen(f'explorer /select,"{abspath}"')
+        else:
+            subprocess.Popen(f'open -R "{abspath}"')
+
+    def copy_name(self) -> None:
+        mime_data = QMimeData()
+        mime_data.setText(self.file)
+        QApplication.clipboard().setMimeData(mime_data)
+
+    def save_as(self) -> None:
+        default = os.path.basename(self.file)
+        _, ext = os.path.splitext(default)
+        filters = {
+            '.mp4': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
+            '.m4v': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
+            '.f4v': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
+            '.lrv': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
+        }
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Save Video", default,
+            filter=f"{filters.get(ext, '')}All files (*.*)"
+        )
+        if filename:
+            shutil.copy(self.file, filename)
