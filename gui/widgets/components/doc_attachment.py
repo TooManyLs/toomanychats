@@ -183,7 +183,7 @@ class DocAttachment(QFrame):
         }
 
         file_name, _ = QFileDialog.getSaveFileName(
-            self, "Save Image", default, 
+            self, "Save Document", default, 
             filter=f"{filters.get(ext, '')}All files (*.*)"
             )
         if file_name:
