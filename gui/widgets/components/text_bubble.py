@@ -21,12 +21,16 @@ from .custom_menu import CustomMenu
 from .textarea import TextArea
 
 class TextBubble(QTextEdit):
-    def __init__(self, text, name=None, *args, **kwargs):
+    def __init__(
+            self, parent: QWidget, text, name=None,
+            timestamp:datetime = datetime.now(), *args, **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
+        self.p = parent
         self.setPlainText(text)
         self.setReadOnly(True)
         self.name = name
-        self.time_text = datetime.now().strftime("%I:%M %p")
+        self.time_text = timestamp.strftime("%I:%M %p")
         self.metrics = QFontMetrics(self.font())
         self.padding = " " * 20 + "\u200B"
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -64,8 +68,8 @@ class TextBubble(QTextEdit):
                 )
             layout.addWidget(self.name, alignment=Qt.AlignTop) 
         self.counter = 0 
-        self.sel: TextArea = None
-        self.chat: QWidget = None
+        self.sel: TextArea
+        self.chat: QWidget
         self.selectionChanged.connect(self.selection_changed)
 
     def selection_changed(self):
@@ -83,7 +87,7 @@ class TextBubble(QTextEdit):
 
     def compute_size(self):
         text = self.toPlainText()
-        parent_width = self.parent().parent().parent().size().width()
+        parent_width = self.p.size().width()
         lines = text.split('\n')
         text_width = max(
             (max(
