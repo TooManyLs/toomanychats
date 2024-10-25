@@ -23,7 +23,11 @@ class CustomMenu(QMenu):
         self.offset = offset
 
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup | Qt.NoDropShadowWindowHint)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint 
+            | Qt.WindowType.Popup 
+            | Qt.WindowType.NoDropShadowWindowHint
+        )
 
         self.menu_layout = QVBoxLayout(self)
         self.menu_layout.setContentsMargins(0,0,0,0)

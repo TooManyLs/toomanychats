@@ -16,8 +16,9 @@ from ..utils.tools import secure_delete
 class ChatHeader(QFrame):
     reinit = Signal()
     getCode = Signal(str)
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.p = parent
         self.main = QHBoxLayout(self)
         self.title = QLabel("Chat Room")
         self.options = QToolButton()

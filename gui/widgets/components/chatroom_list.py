@@ -17,7 +17,7 @@ class ChatRoomList(QWidget):
         self.list.setSpacing(0)
 
         self.list.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
-        
+
         self.setStyleSheet("background-color: #161616;")
 
     def collapse_toggle(self) -> None:
