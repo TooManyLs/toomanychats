@@ -11,6 +11,8 @@ class MsgType(Enum):
     IMAGE = b'IMG'
     VIDEO = b'VID'
     DOCUMENT = b'DOC'
+    # For unrecognized tags
+    UNKNOWN = b'UNK'
 
 class ChunkSize(Enum):
     K64 = 65_536

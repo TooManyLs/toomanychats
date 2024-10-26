@@ -23,9 +23,11 @@ from .textarea import TextArea
 class TextBubble(QTextEdit):
     def __init__(
             self, parent: QWidget, text, name=None,
-            timestamp:datetime = datetime.now(), *args, **kwargs
+            timestamp:datetime = datetime.now(), *args,
+            unknown: bool = False, **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
+        self.unknown = unknown
         self.p = parent
         self.setPlainText(text)
         self.setReadOnly(True)
@@ -33,24 +35,27 @@ class TextBubble(QTextEdit):
         self.time_text = timestamp.strftime("%I:%M %p")
         self.metrics = QFontMetrics(self.font())
         self.padding = " " * 20 + "\u200B"
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setStyleSheet(
-            """
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        style = """
             padding-left: 5px; 
             padding-right: 5px; 
             border-radius: 12px; 
             background-color: #2e2e2e;
-            color: white;
             """
+        self.setStyleSheet(
+                style + " color: white;"
             )
         if name:
             self.setViewportMargins(0, 14, 0, 0)
             self.name = QPushButton(name)
-            self.name.setCursor(QCursor(Qt.PointingHandCursor))
+            self.name.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self.name.clicked.connect(lambda: print(f"pushed {name}"))
-            self.name.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+            self.name.setSizePolicy(
+                    QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
+                    )
             self.name.setMaximumWidth(
-                self.metrics.horizontalAdvance(self.name.text()) * 1.3)
+                int(self.metrics.horizontalAdvance(self.name.text()) * 1.3)
+                )
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0,0,0,0)
             layout.setSpacing(0)
@@ -64,9 +69,18 @@ class TextBubble(QTextEdit):
                     border: none;
                     text-align: left;
                     outline: none;
+                    color: white;
                 """
                 )
-            layout.addWidget(self.name, alignment=Qt.AlignTop) 
+            layout.addWidget(self.name, alignment=Qt.AlignmentFlag.AlignTop) 
+        
+        if self.unknown:
+            font = self.font()
+            font.setItalic(True)
+            self.setFont(font)
+            self.setStyleSheet(style + " color: gray;")
+            self.setText("This message cannot be displayed.\nUpdate your app to see the content of this message.")
+
         self.counter = 0 
         self.sel: TextArea
         self.chat: QWidget
@@ -98,7 +112,7 @@ class TextBubble(QTextEdit):
         if text_width > parent_width * 0.8:
             text_width = parent_width * 0.8
 
-        self.setFixedWidth(min(text_width, 500))
+        self.setFixedWidth(min(int(text_width), 500))
 
         doc = QTextDocument(self.toPlainText() + self.padding)
         doc.setDefaultFont(self.font())
@@ -107,18 +121,18 @@ class TextBubble(QTextEdit):
         text_height = doc.size().height() - 6
         if self.name:
             text_height += 13
-        self.setFixedHeight(text_height)
+        self.setFixedHeight(int(text_height))
 
-    def focusInEvent(self, event) -> None:
+    def focusInEvent(self, e) -> None:
         for o in self.chat.children():
             if isinstance(o, TextBubble) and o != self:
                 cursor = o.textCursor()
                 cursor.clearSelection()
                 o.setTextCursor(cursor) 
-        super().focusInEvent(event)
+        super().focusInEvent(e)
 
-    def paintEvent(self, event):
-        super().paintEvent(event)
+    def paintEvent(self, e):
+        super().paintEvent(e)
 
         painter = QPainter(self.viewport())
         painter.setPen(QColor('gray'))
@@ -128,9 +142,16 @@ class TextBubble(QTextEdit):
             rect.setBottom(rect.bottom() - 17)
         else:
             rect.setBottom(rect.bottom() - 3)
-        painter.drawText(rect, Qt.AlignBottom | Qt.AlignRight, self.time_text)
+        painter.drawText(
+                rect,
+                Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight,
+                self.time_text
+                )
 
-    def contextMenuEvent(self, ev) -> None:
+    def contextMenuEvent(self, e) -> None:
+        if self.unknown:
+            return
+
         self.menu = CustomMenu(self)
         cursor = self.textCursor()
         if cursor.hasSelection():
@@ -141,7 +162,7 @@ class TextBubble(QTextEdit):
             self.menu.add_action("Copy text", lambda:self.copy_text(True))
         self.menu.add_action("Delete", lambda:self.deleteLater(), 
                              style="color: #e03e3e")
-        self.menu.exec(ev.globalPos())
+        self.menu.exec(e.globalPos())
 
     def copy_text(self, copy_all=True):
         if copy_all:

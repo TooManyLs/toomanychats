@@ -17,6 +17,7 @@ class MessageRenderer():
             MsgType.IMAGE: self._render_img_msg,
             MsgType.VIDEO: self._render_vid_msg,
             MsgType.DOCUMENT: self._render_doc_msg,
+            MsgType.UNKNOWN: self._render_unknown_msg,
         }
 
     def render_message(
@@ -57,6 +58,13 @@ class MessageRenderer():
         timestamp, name, data = self._get_data(header, msg)
         path = save_file(data, header.get('basename', ''))
         message = DocAttachment(path, name, False, self.p, timestamp)
+        self._insert_message(message, pos, own)
+
+    def _render_unknown_msg(
+            self, header: Tags, msg: bytes, pos: int, own: bool
+    ) -> None:
+        timestamp, name, _ = self._get_data(header, msg)
+        message = TextBubble(self.p, "This message cannot be displayed", name, timestamp, unknown = True)
         self._insert_message(message, pos, own)
 
     def _insert_message(
