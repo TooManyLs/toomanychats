@@ -24,7 +24,7 @@ class Receiver():
         self.cipher = cipher
         self.chunk_size = chunk_size.value
 
-    def receive_message(self) -> tuple[Tags | None, bytes]:
+    def receive_message(self) -> tuple[Tags, bytes]:
         is_header = True
         chunks = []
         header = b''
@@ -50,12 +50,7 @@ class Receiver():
             else:
                 raise RuntimeError("Socket connection broken")
 
-        # Parse header or return None if tag hasn't been recognized
-        try:
-            tags = HeaderParser(header, self.cipher).tags
-        except ValueError as e:
-            print(e)
-            tags = None
+        tags = HeaderParser(header, self.cipher).tags
 
         encrypted = b''.join(chunks)[4:]
         data = decrypt_message(self.cipher, encrypted)
@@ -69,7 +64,7 @@ class AsyncReceiver():
         self.cipher = cipher
         self.chunk_size = chunk_size.value
 
-    async def receive_message(self) -> tuple[Tags | None, bytes]:
+    async def receive_message(self) -> tuple[Tags, bytes]:
         is_header = True
         chunks = []
         header = b''
@@ -102,12 +97,7 @@ class AsyncReceiver():
             else:
                 raise RuntimeError("Socket connection broken")
 
-        # Parse header or return None if tag hasn't been recognized
-        try:
-            tags = HeaderParser(header, self.cipher).tags
-        except ValueError as e:
-            print(e)
-            tags = None
+        tags = HeaderParser(header, self.cipher).tags
 
         encrypted = b''.join(chunks)[4:]
         data = decrypt_message(self.cipher, encrypted)

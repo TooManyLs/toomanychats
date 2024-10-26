@@ -39,9 +39,10 @@ class HeaderParser():
             pos += length
             tag_counter += 1
 
-        # This can fail with the ValueError so wherever parser class is
-        # instantiated there should be a try-except block
-        typ = MsgType(tags[0])
+        try:
+            typ = MsgType(tags[0])
+        except ValueError:
+            typ = MsgType.UNKNOWN
 
         length = int.from_bytes(tags[1])
         is_file = tags[2] != b'0'
