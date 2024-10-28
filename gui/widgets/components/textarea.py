@@ -1,10 +1,12 @@
 import os
+import tempfile
 
 from PySide6.QtWidgets import QSizePolicy, QTextEdit
 from PySide6.QtGui import QTextDocumentFragment, QTextDocument
 from PySide6.QtCore import Qt, QPoint, Signal
 
 from . import CustomMenu
+from ..utils.tools import qimage_to_bytes
 
 class TextArea(QTextEdit):
     attach = Signal(list)
@@ -29,11 +31,19 @@ class TextArea(QTextEdit):
         else:
             self.setMinimumHeight(self.maximumHeight())
 
-    def paintEvent(self, event):
+    def paintEvent(self, e):
         self.compute_height()
-        return super().paintEvent(event)
+        return super().paintEvent(e)
     
     def insertFromMimeData(self, source):
+        if source.hasImage():
+            with tempfile.NamedTemporaryFile(
+                "w+b", suffix=".jpg", delete=False,
+                delete_on_close=False
+            ) as tmp:
+                tmp.write(qimage_to_bytes(source.imageData()))
+                self.attach.emit([tmp.name])
+            return
         if source.hasUrls():
             for url in source.urls():
                 if os.path.isdir(url.toLocalFile()):
@@ -45,11 +55,11 @@ class TextArea(QTextEdit):
         fragment = QTextDocumentFragment.fromPlainText(text)
         self.textCursor().insertFragment(fragment)
 
-    def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key.Key_Return and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+    def keyPressEvent(self, e) -> None:
+        if e.key() == Qt.Key.Key_Return and not e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             self.send.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(e)
 
     def dragEnterEvent(self, e) -> None:
         if e.mimeData().hasUrls():

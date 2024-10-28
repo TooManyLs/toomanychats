@@ -1,5 +1,6 @@
 import os
 from ssl import SSLSocket
+import tempfile
 from threading import Thread
 from time import sleep
 
@@ -144,14 +145,14 @@ class ChatWidget(QWidget):
         input_layout.addWidget(self.attach)
         input_layout.addWidget(self.send_field)
         input_layout.addWidget(self.button)
-        inputs.setLayout(input_layout)
+        self.inputs.setLayout(input_layout)
 
-        self.header = ChatHeader()
+        self.header = ChatHeader(self)
         self.header.getCode.connect(self.on_send)
 
         main_layout.addWidget(self.header)
         main_layout.addWidget(self.scroll_area)
-        main_layout.addWidget(inputs)
+        main_layout.addWidget(self.inputs)
 
         self.setLayout(main_layout)
 
@@ -207,7 +208,7 @@ class ChatWidget(QWidget):
                 QApplication.clipboard().setMimeData(mime_data)
                 print("copied")
                 return
-            bubble = TextBubble(txt, nametag)
+            bubble = TextBubble(self, txt, nametag)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
             self.chat_layout.addWidget(bubble, 
@@ -219,7 +220,7 @@ class ChatWidget(QWidget):
             return
         to_send: str = self.send_field.toPlainText().strip()     
         if to_send:
-            bubble = TextBubble(to_send)
+            bubble = TextBubble(self, to_send)
             bubble.sel = self.send_field
             bubble.chat = self.chat_area
             self.chat_layout.addWidget(bubble, 
@@ -257,6 +258,14 @@ class ChatWidget(QWidget):
                 if ext != ".gif":
                     compressed = compress_image(f)
                     args = (compressed, True)
+
+                    # Delete temporary file if image was grabbed
+                    # from the clipboard
+                    temp_dir = tempfile.gettempdir()
+                    if os.path.commonpath([temp_dir, f]):
+                        os.remove(f)
+
+                    f = compressed
                 else:
                     args = (f, True)
                 attachment = SingleImage(self, f)

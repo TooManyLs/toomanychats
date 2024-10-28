@@ -1,3 +1,5 @@
+import os
+import tempfile
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                                QPushButton, QSpacerItem, QSizePolicy, 
                                QLabel,  QCheckBox,  QApplication,
@@ -152,6 +154,13 @@ class AttachDialog(Dialog):
         self.d_parent.on_dialog_finished(Dialog.DialogCode.Accepted, files)
     
     def dialog_reject(self):
+        # Delete temporary file if image was grabbed from the clipboard
+        if len(self.data) == 1:
+            temp_dir = tempfile.gettempdir()
+            file = self.data[0]
+            if os.path.commonpath([temp_dir, file]):
+                os.remove(file)
+
         self.d_parent.on_dialog_finished(Dialog.DialogCode.Rejected, [])
 
     def showEvent(self, event):
