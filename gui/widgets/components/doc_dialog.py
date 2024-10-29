@@ -158,7 +158,7 @@ class AttachDialog(Dialog):
         if len(self.data) == 1:
             temp_dir = tempfile.gettempdir()
             file = self.data[0]
-            if os.path.commonpath([temp_dir, file]):
+            if temp_dir in file:
                 os.remove(file)
 
         self.d_parent.on_dialog_finished(Dialog.DialogCode.Rejected, [])

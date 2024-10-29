@@ -262,7 +262,7 @@ class ChatWidget(QWidget):
                     # Delete temporary file if image was grabbed
                     # from the clipboard
                     temp_dir = tempfile.gettempdir()
-                    if os.path.commonpath([temp_dir, f]):
+                    if temp_dir in f:
                         os.remove(f)
 
                     f = compressed
