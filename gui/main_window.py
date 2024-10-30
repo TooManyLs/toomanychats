@@ -36,7 +36,8 @@ class MainWindow(QMainWindow):
         atexit.register(self.quit)
 
     def initUI(self) -> None:
-        if hasattr(self, "s") and self.s:
+        if hasattr(self, "s") and isinstance(self.s, SSLSocket):
+            self.s.shutdown(socket.SHUT_RDWR)
             self.s.close()
 
         # retrieving host and port from config.ini
