@@ -42,6 +42,7 @@ class Receiver():
                 if chunk == b'<!DATA>':
                     header = b''.join(chunks)
                     chunks.clear()
+                    is_header = False
                     continue
 
                 if is_header:
@@ -52,7 +53,7 @@ class Receiver():
 
         tags = HeaderParser(header, self.cipher).tags
 
-        encrypted = b''.join(chunks)[4:]
+        encrypted = b''.join(chunks)
         data = decrypt_message(self.cipher, encrypted)
         return tags, data
 
@@ -81,14 +82,15 @@ class AsyncReceiver():
                 # Separate header tags from message content
                 if chunk == b'<!DATA>':
                     # Generate UTC timestamp on the serverside
-                    timestamp = str(
+                    timestamp = self.cipher.encrypt(str(
                             datetime.now().astimezone(UTC).timestamp()
-                            ).encode()
+                            ).encode())
                     chunks.append(len(timestamp).to_bytes(4, "big"))
                     chunks.append(timestamp)
 
                     header = b''.join(chunks)
                     chunks.clear()
+                    is_header = False
                     continue
 
                 if is_header:
@@ -98,7 +100,6 @@ class AsyncReceiver():
                 raise RuntimeError("Socket connection broken")
 
         tags = HeaderParser(header, self.cipher).tags
-
-        encrypted = b''.join(chunks)[4:]
+        encrypted = b''.join(chunks)
         data = decrypt_message(self.cipher, encrypted)
         return tags, data
