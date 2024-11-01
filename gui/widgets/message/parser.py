@@ -25,8 +25,7 @@ class HeaderParser():
         pos = 0
         while True:
             if len(tags) >= 3:
-                if ((tags[2] == b'1' and tag_counter > 5) 
-                        or (tags[2] == b'0' and tag_counter > 4)):
+                if tag_counter > 5:
                     break
             length = int.from_bytes(self._header[pos:pos + 4], "big")
             pos += 4
@@ -44,19 +43,27 @@ class HeaderParser():
         except ValueError:
             typ = MsgType.UNKNOWN
 
+        if typ == MsgType.SERVER:
+            # Return message_type as the only relevant info for this type
+            return Tags(
+                message_type = typ,
+                message_length = 0,
+                is_file = False,
+                basename = "",
+                chatroom_id = room_id,
+                timestamp = timestamp,
+            )
+
         length = int.from_bytes(tags[1])
         is_file = tags[2] != b'0'
-        if is_file:
-            basename = self._decrypt(tags[3]).decode()
-            room_id = UUID(bytes=self._decrypt(tags[4]))
-            timestamp = datetime.fromtimestamp(
-                float(self._decrypt(tags[5])), self._tz
-            )
-        else:
-            room_id = UUID(bytes=self._decrypt(tags[3]))
-            timestamp = datetime.fromtimestamp(
-                float(self._decrypt(tags[4])), self._tz
-            )
+
+        basename = self._decrypt(tags[3]).decode()
+
+        room_id = UUID(bytes=self._decrypt(tags[4]))
+
+        timestamp = datetime.fromtimestamp(
+            float(self._decrypt(tags[5])), self._tz
+        )
 
         return Tags(
             message_type = typ,
