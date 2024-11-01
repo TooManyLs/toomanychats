@@ -30,15 +30,21 @@ class MessageRenderer():
     def _render_text_msg(
             self, header: Tags, msg: bytes, pos: int, own: bool
     ) -> None:
-        timestamp, name, data = self._get_data(header, msg)
+        timestamp, name, data = self._get_data(header, msg, own)
         message = TextBubble(self.p, data.decode(), name, timestamp)
+
+        # chat_area and send_field are parts of ChatWidget which
+        # I cannot import as a type due to the way circular imports
+        # are handled in python
+        message.chat = self.p.chat_area
+        message.sel = self.p.send_field
 
         self._insert_message(message, pos, own)
 
     def _render_img_msg(
             self, header: Tags, msg: bytes, pos: int, own: bool
     ) -> None:
-        timestamp, name, data = self._get_data(header, msg)
+        timestamp, name, data = self._get_data(header, msg, own)
         message = SingleImage(self.p, QImage.fromData(data),
                               name, timestamp)
 
@@ -47,7 +53,7 @@ class MessageRenderer():
     def _render_vid_msg(
             self, header: Tags, msg: bytes, pos: int, own: bool
     ) -> None:
-        timestamp, name, data = self._get_data(header, msg)
+        timestamp, name, data = self._get_data(header, msg, own)
         path = save_file(data, header.get('basename', ''))
         message = VideoWidget(path, self.p, name, timestamp)
         self._insert_message(message, pos, own)
@@ -55,7 +61,7 @@ class MessageRenderer():
     def _render_doc_msg(
             self, header: Tags, msg: bytes, pos: int, own: bool
     ) -> None:
-        timestamp, name, data = self._get_data(header, msg)
+        timestamp, name, data = self._get_data(header, msg, own)
         path = save_file(data, header.get('basename', ''))
         message = DocAttachment(path, name, False, self.p, timestamp)
         self._insert_message(message, pos, own)
@@ -63,8 +69,9 @@ class MessageRenderer():
     def _render_unknown_msg(
             self, header: Tags, msg: bytes, pos: int, own: bool
     ) -> None:
-        timestamp, name, _ = self._get_data(header, msg)
-        message = TextBubble(self.p, "This message cannot be displayed", name, timestamp, unknown = True)
+        timestamp, name, _ = self._get_data(header, msg, own)
+        message = TextBubble(self.p, "This message cannot be displayed",
+                             name, timestamp, unknown = True)
         self._insert_message(message, pos, own)
 
     def _insert_message(
@@ -75,15 +82,17 @@ class MessageRenderer():
                                      Qt.AlignmentFlag.AlignRight if own 
                                      else Qt.AlignmentFlag.AlignLeft
                                  )
-                            )
+                             )
 
     def _get_data(
-            self, header: Tags, msg: bytes
+            self, header: Tags, msg: bytes, own: bool
     ) -> tuple[datetime, str, bytes]:
+        # Gets parts of data necessary for widgets to display
         timestamp = header['timestamp']
         name, data = msg.split(b'<SEP>', 1)
+        name = "" if own else name.decode()
         
-        return timestamp, name.decode(), data
+        return timestamp, name, data
 
 def save_file(data: bytes, basename: str = "") -> str:
     if not basename:
