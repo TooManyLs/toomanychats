@@ -52,36 +52,36 @@ class Sender():
 
 class AsyncSender():
     def __init__(
-            self, socket: StreamWriter, cipher: PKCS1OAEP_Cipher,
+            self, cipher: PKCS1OAEP_Cipher,
             chunk_size: ChunkSize = ChunkSize.K64
     ) -> None:
 
-        self.s = socket
         self.chunk_size = chunk_size.value
         self._cipher = cipher
 
     async def send_message(
-            self, msg: bytes, tags: Tags, pubkey: bytes
+            self, tags: Tags, msg: bytes, sock: StreamWriter, pubkey: bytes
     ) -> None:
 
         tag_list = generate_header(tags, pubkey)
 
         for header_tag in tag_list:
-            await self._send_block(header_tag)
+            await self._send_block(header_tag, sock)
 
         # Separator that differentiates header tags from actual data
-        await self._send_block(b'<!DATA>')
+        await self._send_block(b'<!DATA>', sock)
 
+        data = pack_data(encrypt_aes(msg), pubkey)
         sz = self.chunk_size
-        for i in range(0, len(msg), sz):
-            chunk = msg[i:i + sz]
-            await self._send_block(chunk)
+        for i in range(0, len(data), sz):
+            chunk = data[i:i + sz]
+            await self._send_block(chunk, sock)
 
         # END tag to tell receiver to stop reading stream
-        await self._send_block(b'MSGEND')
+        await self._send_block(b'MSGEND', sock)
 
-    async def _send_block(self, data: bytes):
-        self.s.write(len(data).to_bytes(4, "big"))
-        await self.s.drain()
-        self.s.write(data)
-        await self.s.drain()
+    async def _send_block(self, data: bytes, sock: StreamWriter):
+        sock.write(len(data).to_bytes(4, "big"))
+        await sock.drain()
+        sock.write(data)
+        await sock.drain()
