@@ -6,16 +6,22 @@ import os
 import socket
 import ssl
 from typing import TypedDict
+from uuid import UUID
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 import pyotp
 
 from database import Connect, NoDataFoundError
+from gui.widgets.message.misc import MsgType
 from gui.widgets.utils.encryption import (
     encrypt_aes, decrypt_aes, generate_sha256,
     pack_data, unpack_data,
 )
+from gui.widgets.message import ChunkSize, AsyncSender, AsyncReceiver, Tags
+
+
+buffer_limit = ChunkSize.K256
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
@@ -57,82 +63,44 @@ with open('server.conf.enc', 'rb') as f:
 passwd = config.get('Database', 'DB_PASSWORD')
 db_name = config.get('Database', 'DB_NAME')
 
-async def send_chunks(writer: StreamWriter, data: bytes, 
-                      chunk_size: int = 65536) -> None:
-    writer.write(len(data).to_bytes(4, 'big'))
-    await writer.drain()
-    for i in range(0, len(data), chunk_size):
-        chunk = data[i:i+chunk_size]
-        writer.write(chunk)
-        await writer.drain()
-
-async def receive_chunks(reader: StreamReader, 
-                         chunk_size: int = 65536) -> bytes:
-    try:
-        data_length_bytes = await reader.readexactly(4)
-    except IncompleteReadError:
-        return b''
-    if data_length_bytes == b'code':
-        return b'/code'
-    data_length = int.from_bytes(data_length_bytes, 'big')
-    chunks = []
-    bytes_read = 0
-    while bytes_read < data_length:
-        chunk = await reader.read(min(chunk_size, data_length - bytes_read))
-        if chunk:
-            chunks.append(chunk)
-            bytes_read += len(chunk)
-        else:
-            raise RuntimeError("Socket connection broken")
-    return b''.join(chunks)
-
 async def listen_for_client(reader: StreamReader, writer: StreamWriter, 
                             username: str) -> None:
+    receiver = AsyncReceiver(reader, s_cipher, buffer_limit)
+    sender = AsyncSender(s_cipher, buffer_limit)
+
     commands = {
-        "/code": lambda: send_fcode(writer, username)
-    }
+            "code": send_fcode
+            }
  
     with Connect(passwd, db_name) as db:
         while True:
             try:
-                data = await receive_chunks(reader)
-                if not data:
-                    raise ConnectionResetError
-                msg, aes, pub = unpack_data(data)
-                del data
-                if pub != SERVER_RSA.public_key():
-                    user = db.get_by_pubkey(pub.export_key().decode())
-                    cli = auth_users[user]["sock"]
-                    cli.write(pack_data((msg, aes), pub.export_key()))
+                tags, data = await receiver.receive_message()
+                if tags["message_type"] == MsgType.SERVER:
+                    cmd = data.decode().split("<SEP>", 1)[1]
+                    await commands[cmd](
+                            sender, writer, username, tags=tags
+                            )
                     continue
-
-                dec_key = s_cipher.decrypt(aes)
                 for u, info in auth_users.items():
                     if u != username:
                         w = info["sock"]
                         pubkey = info["public_key"]
-                        await send_chunks(w, pack_data((msg, dec_key), pubkey))
-                del msg
-            except ValueError:
-                # Commands come in plaintext format so unpack_data is unable
-                # to decrypt not encrypted stream
-                cmd = data.decode()
-                await commands[cmd]()
-                continue
-            except (OSError, ConnectionResetError):
-                # Catch exceptions related to client disconnecting
+                        await sender.send_message(tags, data, w, pubkey)
+            except IncompleteReadError:
+                # Client disconnects
                 print("Socket is closed.")
                 del auth_users[username]
                 writer.close()
                 break
 
-async def send_fcode(writer: StreamWriter, username: str) -> None:
+async def send_fcode(
+        sender: AsyncSender, writer: StreamWriter,
+        username: str, *, tags: Tags
+) -> None:
     code = auth_users[username]["friend_code"]
     user_pub = auth_users[username]["public_key"]
-    await send_chunks(
-        writer, 
-        pack_data(encrypt_aes(code.encode()), user_pub)
-        )
+    await sender.send_message(tags, f"code<SEP>{code}".encode(), writer, user_pub)
  
 async def check_fcode(reader: StreamReader, writer: StreamWriter) -> str | None:
     while True:
@@ -201,7 +169,8 @@ async def secure_connect(writer: StreamWriter) -> tuple[str, int] | None:
 
     :param writer:
     :type writer: ```StreamWriter```
-    :return: returns client's peername tuple (IP address and port) if secure connection established else ```None```
+    :return: returns client's peername tuple (IP address and port) 
+    if secure connection established else ```None```
     :rtype: ```tuple[str, int] | None```
     """
 
@@ -335,7 +304,9 @@ async def main() -> None:
     server = await asyncio.start_server(
         handle_client, SERVER_HOST, SERVER_PORT,
         family=socket.AF_INET, 
-        reuse_address=True)
+        reuse_address=True,
+        limit=buffer_limit.value,
+    )
 
     addr = server.sockets[0].getsockname()
     print(f"[*] Listening on {addr}")
