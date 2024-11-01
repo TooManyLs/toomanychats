@@ -11,6 +11,7 @@ class MsgType(Enum):
     IMAGE = b'IMG'
     VIDEO = b'VID'
     DOCUMENT = b'DOC'
+    SERVER = b'SRV'
     # For unrecognized tags
     UNKNOWN = b'UNK'
 
