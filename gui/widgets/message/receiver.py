@@ -32,7 +32,16 @@ class Receiver():
         while True:
             length_bytes = self.s.recv(4)
             length = int.from_bytes(length_bytes, "big")
-            chunk = self.s.recv(min(length, self.chunk_size))
+
+            # For some reason client buffer limit is 16KB and I can't
+            # change it, so I have to rely on this workaround that
+            # slows down the receiving 😢
+            bytes_read = 0
+            chunk = b''
+            while bytes_read < length:
+                dat = self.s.recv(length - bytes_read)
+                chunk += dat
+                bytes_read += len(dat)
 
             if chunk:
                 if chunk == b'MSGEND':
@@ -100,6 +109,7 @@ class AsyncReceiver():
                 raise RuntimeError("Socket connection broken")
 
         tags = HeaderParser(header, self.cipher).tags
+
         encrypted = b''.join(chunks)
         data = decrypt_message(self.cipher, encrypted)
         return tags, data
