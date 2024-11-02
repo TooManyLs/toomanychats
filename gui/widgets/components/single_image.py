@@ -22,7 +22,7 @@ from ..utils.tools import compress_image, generate_name
 class SingleImage(QLabel):
     def __init__(
             self, parent: QWidget, path: QImage | str = "", name: str = "",
-            timestamp: datetime = datetime.now(), *args, **kwargs
+            timestamp: datetime | None = None, *args, **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
         self.p = parent
@@ -52,7 +52,8 @@ class SingleImage(QLabel):
         self._resized = False
         self.setScaledContents(True)
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.time = timestamp.strftime("%I:%M %p")
+        self.time = (timestamp if timestamp
+                     else datetime.now()).strftime("%I:%M %p")
         self.time_text = QLabel(self.time)
         self.time_text.setSizePolicy(QSizePolicy.Policy.Minimum,
                                      QSizePolicy.Policy.Minimum)

@@ -23,7 +23,7 @@ from .textarea import TextArea
 class TextBubble(QTextEdit):
     def __init__(
             self, parent: QWidget, text, name=None,
-            timestamp:datetime = datetime.now(), *args,
+            timestamp:datetime | None = None, *args,
             unknown: bool = False, **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -32,7 +32,8 @@ class TextBubble(QTextEdit):
         self.setPlainText(text)
         self.setReadOnly(True)
         self.name = name
-        self.time_text = timestamp.strftime("%I:%M %p")
+        self.time_text = (timestamp if timestamp
+                          else datetime.now()).strftime("%I:%M %p")
         self.metrics = QFontMetrics(self.font())
         self.padding = " " * 20 + "\u200B"
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

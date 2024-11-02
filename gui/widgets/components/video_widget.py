@@ -34,7 +34,7 @@ class MediaPlayer(QMediaPlayer):
 class VideoWidget(QVideoWidget):
     def __init__(
         self, file: str, parent: QWidget, name: str = "",
-            timestamp: datetime = datetime.now()
+            timestamp: datetime | None = None
     ) -> None:
         super().__init__(parent)
         
@@ -59,7 +59,8 @@ class VideoWidget(QVideoWidget):
         self.playpause.setStyleSheet("background-color: #2e2e2e;")
         self.playpause.hide()
 
-        self.time_text = timestamp.strftime("%I:%M %p")
+        self.time_text = (timestamp if timestamp
+                          else datetime.now()).strftime("%I:%M %p")
         self.time = QLabel(self.time_text)
         self.time.setFixedSize(63, 23)
         self.__round_corners(self.time, 10)

@@ -24,11 +24,12 @@ picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg',
 class DocAttachment(QFrame):
     def __init__(self, path, name=None, 
                  attachment=False, parent: QWidget | None = None,
-                 timestamp: datetime = datetime.now(),
+                 timestamp: datetime | None = None,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.par = parent
-        self.time = timestamp.strftime("%I:%M %p")
+        self.time = (timestamp if timestamp
+                     else datetime.now()).strftime("%I:%M %p")
         _, ext = os.path.splitext(path)
         self.filename = os.path.basename(path)
         filesize = os.path.getsize(path)
