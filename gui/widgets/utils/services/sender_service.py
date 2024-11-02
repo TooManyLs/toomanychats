@@ -11,13 +11,13 @@ video_extensions = (".mp4", ".m4a", ".m4v", ".3gp", ".3g2", ".avi", ".mkv",
 
 class SenderServiceWorker(QObject):
     def __init__(
-            self, sock: SSLSocket, name: str, cipher: PKCS1OAEP_Cipher,
-            server_pubkey: bytes, buffer_limit: ChunkSize
+            self, sock: SSLSocket, name: str, server_pubkey: bytes,
+            buffer_limit: ChunkSize
     ) -> None:
         super().__init__()
 
         self.sender_wk = Sender(
-                sock, name, cipher, server_pubkey, buffer_limit
+                sock, name, server_pubkey, buffer_limit
                 )
         self.s_pubkey = server_pubkey
 

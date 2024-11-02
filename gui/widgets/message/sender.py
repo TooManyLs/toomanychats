@@ -2,8 +2,6 @@ from asyncio.streams import StreamWriter
 from ssl import SSLSocket
 from uuid import UUID
 
-from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
-
 from ..utils.encryption import pack_data, encrypt_aes
 from . import ChunkSize, MsgType, Tags, generate_header, msg_encrypt
 
@@ -11,14 +9,13 @@ from . import ChunkSize, MsgType, Tags, generate_header, msg_encrypt
 
 class Sender():
     def __init__(
-            self, socket: SSLSocket, name: str, cipher: PKCS1OAEP_Cipher,
-            server_pubkey: bytes, chunk_size: ChunkSize = ChunkSize.K64
+            self, socket: SSLSocket, name: str, server_pubkey: bytes,
+            chunk_size: ChunkSize = ChunkSize.K64
     ) -> None:
 
         self.s = socket
         self.chunk_size = chunk_size.value
         self._name = name.encode()
-        self._cipher = cipher
         self.server = server_pubkey
 
     def send_message(
@@ -52,12 +49,10 @@ class Sender():
 
 class AsyncSender():
     def __init__(
-            self, cipher: PKCS1OAEP_Cipher,
-            chunk_size: ChunkSize = ChunkSize.K64
+            self, chunk_size: ChunkSize = ChunkSize.K64
     ) -> None:
 
         self.chunk_size = chunk_size.value
-        self._cipher = cipher
 
     async def send_message(
             self, tags: Tags, msg: bytes, sock: StreamWriter, pubkey: bytes

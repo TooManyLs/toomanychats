@@ -66,7 +66,7 @@ db_name = config.get('Database', 'DB_NAME')
 async def listen_for_client(reader: StreamReader, writer: StreamWriter, 
                             username: str) -> None:
     receiver = AsyncReceiver(reader, s_cipher, buffer_limit)
-    sender = AsyncSender(s_cipher, buffer_limit)
+    sender = AsyncSender(buffer_limit)
 
     commands = {
             "code": send_fcode
