@@ -130,8 +130,7 @@ class ChatWidget(QWidget):
         self.receiver_thread.start()
 
         self.send_worker = SenderServiceWorker(
-                self.s, self.name, self.my_cipher,
-                self.server_pubkey, buffer_limit
+                self.s, self.name, self.server_pubkey, buffer_limit
                 )
         self.sender_thread = QThread()
         self.send_worker.moveToThread(self.sender_thread)
