@@ -126,17 +126,19 @@ class MainWindow(QMainWindow):
         self.sign_in.name_signal.connect(self.main_widget.listen_for_messages)
         self.enter_widget.reinit.connect(self.initUI)
         if self.s:
+            self.sign_in.reinit.connect(self.initUI)
             self.main_widget.header.reinit.connect(self.initUI)
 
-        from widgets.components.chatroom_item import ChatRoomItem
+        from widgets.components.chatroom_item import ChatRoomItem, ChatType
         for x in range(1, 20):
-            chatroom = ChatRoomItem(f"chat Room NO_{x}")
+            chatroom = ChatRoomItem(f"chat Room NO_{x}", ChatType.GROUP)
             self.chat_room_list_widget.list.addWidget(chatroom)
 
     def quit(self):
         # Worker thread termination
         if hasattr(self.main_widget, "wk_thread"):
-            self.main_widget.wk_thread.quit()
+            self.main_widget.sender_thread.quit()
+            self.main_widget.receiver_thread.quit()
         # Closing socket
         if self.s:
             self.s.close()

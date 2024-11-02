@@ -269,6 +269,8 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
             writer.write(b"passed")
 
             if not await verify_totp(reader, writer, user["secret"]):
+                writer.write(b"2manyA")
+                writer.close()
                 return
 
             if user["new_device"]:
@@ -279,25 +281,32 @@ async def handle_client(reader: StreamReader, writer: StreamWriter) -> None:
                 public_key=user_pub, 
                 friend_code=generate_sha256()
                 )
-            writer.write(b"success")
+            writer.write(b"passed")
             asyncio.create_task(listen_for_client(reader, writer, username))
             break
 
 async def verify_totp(reader: StreamReader, writer: StreamWriter, secret: str) -> bool:
+    """Waits for TOTP encrypted with itself zero-padded;
+    Then it generates current TOTP and pads it to use as a key
+    to decrypt incoming TOTP; Wrong key will result in ValueError"""
     totp = pyotp.TOTP(secret)
-    while True:
+    attempts = 5
+    while attempts != 0:
+        attempts -= 1
         otp = await reader.read(38)
         if not otp:
             writer.close()
-            return False
+            break
         verify_otp = totp.now()
         otp_key = verify_otp.rjust(32, "0")
-        received_otp = decrypt_aes(otp, otp_key.encode()).decode()
-        if not totp.verify(received_otp):
-            writer.write(b"failed")
-            continue
-        else:
+        try:
+            received_otp = decrypt_aes(otp, otp_key.encode()).decode()
+            print(totp.verify(received_otp))
             return True
+        except ValueError:
+            if attempts != 0:
+                writer.write(b"failed")
+    return False
 
 
 async def main() -> None:

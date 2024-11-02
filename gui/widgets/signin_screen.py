@@ -30,6 +30,7 @@ class AuthError(Exception):
 
 class SignIn(QWidget):
     name_signal = Signal(str)
+    reinit = Signal()
     def __init__(self, stacked_layout, s: SSLSocket | None,
                  server_pubkey: RsaKey | None):
         super().__init__()
@@ -168,8 +169,6 @@ class SignIn(QWidget):
             data = self.s.recv(2048)
             try:
                 self.new = False
-                if data == b"failed":
-                    raise AuthError
                 if data == b"new device":
                     self.new = True
                     self.my_pvtkey = RSA.generate(2048)
@@ -189,6 +188,7 @@ class SignIn(QWidget):
                 check_bytestring = decrypt_aes(challenge, key)
                 self.s.send(check_bytestring)
                 resp = self.s.recv(6)
+                print(resp)
                 if resp != b"passed":
                     raise AuthError
 
@@ -197,9 +197,10 @@ class SignIn(QWidget):
                 self.mfa_frame.show()
 
             except ValueError:
-                self.s.send(b"Fail")
+                self.s.send(b"failed")
+                self.s.recv(6)
                 self.incorrect.setText(
-                    "Failed to authenticate:\nInvalid username or password.")
+                    "Failed to authenticate:\nInvalid password.")
             except (FileNotFoundError, AuthError):
                 self.incorrect.setText(
                     "Failed to authenticate:\nInvalid username or password.")
@@ -218,14 +219,18 @@ class SignIn(QWidget):
         otp_key = otp.rjust(32, "0").encode()
         encrypted, _ = encrypt_aes(otp.encode(), key=otp_key)
         self.s.send(encrypted)
-        resp = self.s.read(7)
+        resp = self.s.read(6)
         if resp == b"failed":
             self.inv_c.setText("The code is wrong")
             return
-        elif resp == b"success":
+        elif resp == b"passed":
             if self.new:
                 with open(f"keys/{name}_private.pem", "wb") as f:
                     f.write(self.my_pvtkey.export_key())
+        else:
+            # Too many attempts 
+            self.reinit.emit()
+            return
 
             self.stacked_layout.setCurrentIndex(3)
             self.name_signal.emit(name)
