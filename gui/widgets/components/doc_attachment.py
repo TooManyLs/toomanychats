@@ -112,15 +112,16 @@ class DocAttachment(QFrame):
             name_font = self.name.font()
             name_font.setBold(True)
             self.name.setFont(name_font)
-            metrics = QFontMetrics(self.font())
+            metrics = QFontMetrics(self.name.font())
             self.name.setMaximumWidth(
-                int(metrics.horizontalAdvance(self.name.text()) * 1.4))
+                metrics.horizontalAdvance(name) + 10
+                )
             layout.addWidget(self.name)
             layout.addItem(
                 QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, 
                             QSizePolicy.Policy.Minimum))
             self.name.setStyleSheet("color: white;\
-                    background-color: rgba(0,0,0,0);")
+                    background-color: rgba(0,0,0,0); padding: 0")
             self.setFixedHeight(103)
         
         self.counter = 0

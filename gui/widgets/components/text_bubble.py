@@ -55,7 +55,7 @@ class TextBubble(QTextEdit):
                     QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
                     )
             self.name.setMaximumWidth(
-                int(self.metrics.horizontalAdvance(self.name.text()) * 1.3)
+                self.metrics.horizontalAdvance(self.name.text()) + 10
                 )
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0,0,0,0)

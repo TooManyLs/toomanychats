@@ -86,8 +86,8 @@ class VideoWidget(QVideoWidget):
             self.name = QPushButton(self.name_text)
             self.name.clicked.connect(lambda: print(f"pushed {self.name_text}"))
             nm_metric = QFontMetrics(self.name.font())
-            width = nm_metric.horizontalAdvance(self.name_text) * 1.3
-            self.name.setFixedSize(int(width), 23)
+            width = nm_metric.horizontalAdvance(self.name_text) + 10
+            self.name.setFixedSize(width, 23)
             self.__round_corners(self.name, 10)
             self.name.setObjectName("vid_overlay_btn")
 
