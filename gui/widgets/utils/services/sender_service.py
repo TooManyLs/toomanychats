@@ -1,7 +1,6 @@
 import os
 from ssl import SSLSocket
 from uuid import UUID
-from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 from PySide6.QtCore import QObject
 
 from ...message import ChunkSize, Sender, MsgType

@@ -301,7 +301,6 @@ async def verify_totp(reader: StreamReader, writer: StreamWriter, secret: str) -
         otp_key = verify_otp.rjust(32, "0")
         try:
             received_otp = decrypt_aes(otp, otp_key.encode()).decode()
-            print(totp.verify(received_otp))
             return True
         except ValueError:
             if attempts != 0:

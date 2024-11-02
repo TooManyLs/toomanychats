@@ -210,11 +210,12 @@ class VideoWidget(QVideoWidget):
     def save_as(self) -> None:
         default = os.path.basename(self.file)
         _, ext = os.path.splitext(default)
+        mpeg_4 = "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;"
         filters = {
-            '.mp4': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
-            '.m4v': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
-            '.f4v': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
-            '.lrv': "MPEG-4 video (*.mp4, *.m4v, *.f4v, *.lrv);;",
+            '.mp4': mpeg_4,
+            '.m4v': mpeg_4,
+            '.f4v': mpeg_4,
+            '.lrv': mpeg_4,
         }
         filename, _ = QFileDialog.getSaveFileName(
             self, "Save Video", default,
