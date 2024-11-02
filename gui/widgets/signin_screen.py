@@ -188,7 +188,6 @@ class SignIn(QWidget):
                 check_bytestring = decrypt_aes(challenge, key)
                 self.s.send(check_bytestring)
                 resp = self.s.recv(6)
-                print(resp)
                 if resp != b"passed":
                     raise AuthError
 
@@ -232,10 +231,10 @@ class SignIn(QWidget):
             self.reinit.emit()
             return
 
-            self.stacked_layout.setCurrentIndex(3)
-            self.name_signal.emit(name)
-            for f in self.fields:
-                f.clear()
+        self.stacked_layout.setCurrentIndex(3)
+        self.name_signal.emit(name)
+        for f in self.fields:
+            f.clear()
     
     def sign_up(self):
         for f in self.fields:
