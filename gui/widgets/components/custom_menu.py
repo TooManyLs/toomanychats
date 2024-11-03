@@ -42,7 +42,6 @@ class CustomMenu(QMenu):
                 padding: 7px; 
                 background-color: #3e3e3e;
                 text-align: left;
-                color: white;
             }
             QPushButton:hover{background-color: #4e4e4e;}
             QPushButton:disabled{color: #6e6e6e;}
@@ -52,9 +51,9 @@ class CustomMenu(QMenu):
         
         self.h = 0
 
-    def add_action(self, text: str, action: Callable=None, *, 
-                   obj_name: str=None, style: str=None, 
-                   shortcut: str=None, status: bool=True) -> None:
+    def add_action(self, text: str, action: Callable | None = None, *, 
+                   obj_name: str="", style: str="", 
+                   shortcut: str="", status: bool=True) -> None:
         """
 Creates button and sets action on click.
 ## Args:

@@ -44,7 +44,7 @@ class TextBubble(QTextEdit):
             background-color: #2e2e2e;
             """
         self.setStyleSheet(
-                style + " color: white;"
+                style
             )
         if name:
             self.setViewportMargins(0, 14, 0, 0)
@@ -69,8 +69,6 @@ class TextBubble(QTextEdit):
                     font-weight: 700;
                     border: none;
                     text-align: left;
-                    outline: none;
-                    color: white;
                 """
                 )
             layout.addWidget(self.name, alignment=Qt.AlignmentFlag.AlignTop) 

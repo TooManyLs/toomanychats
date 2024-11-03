@@ -63,9 +63,17 @@ class EnterWidget(QWidget):
             addr = f"{host}:{port} ({server})"
             self.servernames.append(server)
 
-            self.menu.add_action(addr, lambda _, h=host, p=port: self.change_server(h, p))
+            self.menu.add_action(
+                    addr,
+                    lambda _, h=host, p=port: self.change_server(h, p),
+                    style="color: #f1f1f1;"
+                    )
 
-        self.menu.add_action("Connect to...", self.connect_to)
+        self.menu.add_action(
+                "Connect to...",
+                self.connect_to,
+                style="color: #f1f1f1;"
+                )
         self.options.setMenu(self.menu)
         self.options.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
@@ -106,12 +114,10 @@ class EnterWidget(QWidget):
                 border-radius: 6px;
                 font-size: 16px;
                 font-weight: 600;
-                outline: none;
             }
             QToolButton{
                 background-color: #2e2e2e;
                 border-radius: 6px;
-                outline: none;
             }
             QPushButton:hover, QToolButton:hover{
                 background-color: #3e3e3e;

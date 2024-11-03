@@ -24,7 +24,6 @@ class TextField(QLineEdit):
             background-color: rgba(0, 0, 0, 0);
             letter-spacing: 2px;
             font-weight: 600;
-            color: white;
             """)
         self.setFrame(False)
         super(TextField, self).setStyleSheet("background-color: #2e2e2e;")
@@ -66,6 +65,9 @@ class TextField(QLineEdit):
         super(TextField, self).paintEvent(event)
         painter = QPainter(self)
         painter.drawPixmap(7, 3, self.label.grab())
+
+    def contextMenuEvent(self, arg__1) -> None:
+        return
     
     def toggle_visibility(self):
         if self.echoMode() == QLineEdit.Normal:

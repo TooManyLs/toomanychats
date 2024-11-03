@@ -18,7 +18,7 @@ class TextArea(QTextEdit):
         self.one_line_height = self.fontMetrics().lineSpacing()
         self.setMaximumHeight(self.one_line_height * 12 + 12)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setStyleSheet("background-color: #161616; color: white;")
+        self.setStyleSheet("background-color: #161616;")
 
     def compute_height(self):
         doc = QTextDocument(self.toPlainText())

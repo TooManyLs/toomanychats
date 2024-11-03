@@ -61,7 +61,6 @@ class SingleImage(QLabel):
             """
             background-color: rgba(0,0,0,0.4);
             padding: 3px;
-            color: white;
             border-radius: 10px;
             """
             )
@@ -74,7 +73,6 @@ class SingleImage(QLabel):
                 """
                 background-color: rgba(0,0,0,0.4);
                 padding: 3px 5px;
-                color: white;
                 font-weight: 700;
                 border-radius: 10px;
                 """

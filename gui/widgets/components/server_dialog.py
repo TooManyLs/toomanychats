@@ -75,7 +75,6 @@ class ServerDialog(Dialog):
                 border-radius: 6px;
                 font-weight: 600;
                 font-size: 13px;
-                color: white;
             }
             QPushButton:hover{
                 background-color: #3e3e3e;

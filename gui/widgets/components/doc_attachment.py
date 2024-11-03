@@ -93,7 +93,6 @@ class DocAttachment(QFrame):
         self.setStyleSheet(
             """
             QFrame{
-            color: white;
             background-color: #2e2e2e;
             border-radius: 12px;}
             #secondary{color: gray;};
@@ -120,8 +119,8 @@ class DocAttachment(QFrame):
             layout.addItem(
                 QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, 
                             QSizePolicy.Policy.Minimum))
-            self.name.setStyleSheet("color: white;\
-                    background-color: rgba(0,0,0,0); padding: 0")
+            self.name.setStyleSheet("background-color: rgba(0,0,0,0);\
+                    padding: 0")
             self.setFixedHeight(103)
         
         self.counter = 0

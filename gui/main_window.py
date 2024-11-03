@@ -212,13 +212,16 @@ app = QApplication(sys.argv)
 window = MainWindow()
 window.setStyleSheet(
     """
-    QPushButton{color: white;}
+    QPushButton{
+        outline: none;
+        }
     QSplitter{background-color: #161616;}
+    QPushButton, QLabel, QLineEdit, QTextEdit{color: #f1f1f1;}
     """
 )
 palette = QPalette()
 palette.setColor(QPalette.ColorRole.Window, QColor("#1e1e1e"))
-palette.setColor(QPalette.ColorRole.WindowText, QColor("white"))
+palette.setColor(QPalette.ColorRole.WindowText, QColor("#f1f1f1"))
 
 app.setPalette(palette)
 window.resize(640, 800)

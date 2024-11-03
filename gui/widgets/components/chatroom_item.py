@@ -56,7 +56,6 @@ class ChatRoomItem(QFrame):
             """
                 #chritem:hover{background: #1e1e1e;}
                 #chritem QLabel{background: transparent;}
-                #chat-title{color: white;}
                 #lastmsg{
                     color: gray;
                     margin-left: -3px;

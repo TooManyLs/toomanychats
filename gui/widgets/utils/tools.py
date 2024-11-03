@@ -6,13 +6,13 @@ from functools import wraps
 from time import perf_counter
 from io import BytesIO
 from collections import OrderedDict
+from hashlib import sha256
 
 from PIL import Image, ImageOps
 from pillow_heif import register_heif_opener, register_avif_opener
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QImage
 from PySide6.QtCore import QBuffer
-from hashlib import sha256
 
 def generate_name() -> str:
     """Generates random name with timestamp"""

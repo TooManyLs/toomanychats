@@ -117,7 +117,6 @@ class SignUp(QWidget):
 
         self.setStyleSheet(
             """
-            QPushButton{outline: none;}
             #btn{
                 background-color: #2e2e2e;
                 height: 45px;

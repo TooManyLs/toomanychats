@@ -138,11 +138,9 @@ class TOTPDialog(Dialog):
                 border-radius: 6px;
             }
             QLineEdit{
-                outline: none;
                 background-color: #1e1e1e;
                 border: none;
                 padding-left: 1px;
-                color: white;
             }
             #subtitle{
                 margin-left: 10px;

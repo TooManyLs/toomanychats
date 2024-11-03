@@ -54,8 +54,9 @@ class ChatWidget(QWidget):
         main_layout.setSpacing(0)
 
         attach_icon = QIcon("./public/attach.png")
+        send_icon = QIcon("./public/send.png")
         self.attach = QPushButton(attach_icon, "")
-        self.button = QPushButton("Send")
+        self.button = QPushButton(send_icon, "")
         self.send_field = TextArea()
         self.send_field.attach.connect(self.attach_file)
         self.send_field.send.connect(self.on_send)
@@ -74,7 +75,6 @@ class ChatWidget(QWidget):
                 border: none;
                 border-radius: 6px;
                 padding: 7px;
-                outline: none;
                 }
             QPushButton:hover{
                 background-color: #2e2e2e;

@@ -112,7 +112,6 @@ class SignIn(QWidget):
 
         self.setStyleSheet(
             """
-            QPushButton{outline: none;}
             #signin{
                 background-color: #2e2e2e;
                 height: 45px;
@@ -194,6 +193,7 @@ class SignIn(QWidget):
                 self.form_frame.hide()
                 self.shown_btn = self.verify_btn
                 self.mfa_frame.show()
+                self.code_f.setFocus()
 
             except ValueError:
                 self.s.send(b"failed")

@@ -70,7 +70,6 @@ class VideoWidget(QVideoWidget):
             #vid_overlay, #vid_overlay_btn{
                 background-color: #2e2e2e;
                 padding: 3px;
-                color: white;
             }
             #vid_overlay_btn {
                 font-weight: 700;
