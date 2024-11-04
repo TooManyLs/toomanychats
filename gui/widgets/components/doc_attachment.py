@@ -1,4 +1,5 @@
 import os
+import tempfile
 import platform
 import subprocess
 from datetime import datetime
@@ -101,7 +102,13 @@ class DocAttachment(QFrame):
         if attachment:
             self.setFixedWidth(290)
             self.setStyleSheet("#secondary{color: gray;}")
+        else:
+            temp_dir = tempfile.gettempdir()
+            if temp_dir in path:
+                filename = os.path.basename(path)
+                self.path = f"./cache/attachments/{filename}"
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
 
         if name:
             self.name = QPushButton(name)

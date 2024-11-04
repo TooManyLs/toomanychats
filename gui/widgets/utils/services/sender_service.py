@@ -1,7 +1,10 @@
 import os
+import shutil
+import tempfile
 from ssl import SSLSocket
 from uuid import UUID
 from PySide6.QtCore import QObject
+from threading import Thread
 
 from ...message import ChunkSize, Sender, MsgType
 
@@ -38,6 +41,11 @@ class SenderServiceWorker(QObject):
         filename = os.path.basename(path)
         with open(path, "rb") as f:
             data = f.read()
+
+        # Move file to an attachments directory if it is a temporary file
+        temp_dir = tempfile.gettempdir()
+        if temp_dir in path:
+            shutil.move(path, f"./cache/attachments/{filename}")
 
         if ext == ".gif":
             typ = MsgType.IMAGE
