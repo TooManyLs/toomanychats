@@ -52,6 +52,11 @@ def cache_check(max_size: int):
 
 @cache_check(max_size=64)
 def compress_image(image_path: str="", max_size: int = 1280) -> QImage:
+    """Compresses image into JPEG with maximum dimension
+    size of ```max_size```.
+    If ```max_size``` <= 128 compression quality cut to 30%(default: 90%)
+    """
+
     if not image_path:
         clipboard = QApplication.clipboard()
         img = clipboard.image()
@@ -88,10 +93,13 @@ def compress_image(image_path: str="", max_size: int = 1280) -> QImage:
     return compressed_qimage
 
 def qimage_to_bytes(image: QImage) -> bytes:
+    """Converts Qt's QImage into bytes"""
+
     buffer = QBuffer()
     buffer.open(QBuffer.OpenModeFlag.ReadWrite)
     image.save(buffer, "JPEG")
     bytes_data = buffer.data().data()
+
     return bytes_data
 
 def timer(func):

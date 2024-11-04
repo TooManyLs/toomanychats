@@ -143,8 +143,8 @@ class SignIn(QWidget):
             )
         self.fields = self.findChildren(TextField)
 
-        for w in self.fields:
-            w.setMaximumWidth(400)
+        self.mfa_frame.setMaximumWidth(400)
+        self.form_frame.setMaximumWidth(400)
 
         self.btn.clicked.connect(self.sign_in)
         self.reg.clicked.connect(self.sign_up)

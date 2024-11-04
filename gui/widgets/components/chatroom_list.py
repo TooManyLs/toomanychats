@@ -1,4 +1,3 @@
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy, QSpacerItem
 
 
@@ -16,10 +15,10 @@ class ChatRoomList(QWidget):
         self.list.setContentsMargins(0,0,0,0)
         self.list.setSpacing(0)
 
-        self.list.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+        self.list.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum,
+                                      QSizePolicy.Policy.Expanding))
 
         self.setStyleSheet("background-color: #161616;")
 
     def collapse_toggle(self) -> None:
         self.is_collapsed = not self.is_collapsed
-        print("Collapsed" if self.is_collapsed else "Expanded")

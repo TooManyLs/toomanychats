@@ -62,7 +62,7 @@ class TOTPDialog(Dialog):
         # Text
         self.scan = QLabel("SCAN THE QR CODE")
         self.instruction = QLabel(
-            "Open your authenticator app and scan QR code on the screen using your phone or enter the code below manually."
+            "Open your authenticator app and scan QR code on the screen or enter the code below manually."
         )
 
         self.manual = QLabel("MANUAL ENTRY KEY")
@@ -164,8 +164,8 @@ class TOTPDialog(Dialog):
             """
         )
 
-    def showEvent(self, event):
-        super().showEvent(event)
+    def showEvent(self, arg__1):
+        super().showEvent(arg__1)
         parent_geometry = self.d_parent.main_window.geometry()
         self.move(parent_geometry.center() - self.rect().center())
     

@@ -81,7 +81,7 @@ class EnterWidget(QWidget):
         buttons.addWidget(self.no_connection, 
                           alignment=Qt.AlignmentFlag.AlignHCenter)
         buttons.addWidget(self.sign_in_button)
-        buttons.addSpacing(20)
+        buttons.addSpacing(30)
         buttons.addWidget(self.sign_up_button)
 
         self.sign_in_button.setMaximumWidth(400)

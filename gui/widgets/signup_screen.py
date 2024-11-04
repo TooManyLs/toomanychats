@@ -79,9 +79,9 @@ class SignUp(QWidget):
 
         self.code = QVBoxLayout()
         self.code.addWidget(self.friend_code)
-        self.code.addSpacing(20)
+        self.code.addSpacing(30)
         self.code.addWidget(self.friend_name)
-        self.code.addSpacing(20)
+        self.code.addSpacing(30)
         self.code.addWidget(self.check_btn)
         self.code.addWidget(self.inv_code)
 
