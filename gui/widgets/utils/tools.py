@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import platform
 import binascii
 from datetime import datetime
@@ -102,11 +103,11 @@ def timer(func):
         return result
     return wrapper
 
-def secure_delete(filepath: str, passes: int=10) -> None:
-    with open(filepath, "ba+") as f:
-        length = f.tell()
-    with open(filepath, "br+") as f:
-        for _ in range(passes):
-            f.seek(0)
-            f.write(os.urandom(length))
-    os.remove(filepath)
+def get_documents_dir() -> Path:
+    """Returns a path to a Documents directory.
+    Creates one if it didn't exist."""
+
+    documents_dir = Path(os.path.expanduser("~/Documents"))
+    documents_dir.mkdir(parents=True, exist_ok=True)
+
+    return documents_dir

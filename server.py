@@ -5,6 +5,7 @@ from configparser import ConfigParser
 import os
 import socket
 import ssl
+from pathlib import Path
 from typing import TypedDict
 from uuid import UUID
 
@@ -13,12 +14,19 @@ from Crypto.Cipher import PKCS1_OAEP
 import pyotp
 
 from database import Connect, NoDataFoundError
-from gui.widgets.message.misc import MsgType
 from gui.widgets.utils.encryption import (
     encrypt_aes, decrypt_aes, generate_sha256,
     pack_data, unpack_data,
 )
-from gui.widgets.message import ChunkSize, AsyncSender, AsyncReceiver, Tags
+from gui.widgets.message import (
+        ChunkSize,
+        AsyncSender,
+        AsyncReceiver,
+        Tags,
+        MsgType,
+        )
+from generate_ssl_tls import generate_cert, check_cert
+from gui.widgets.utils.tools import get_documents_dir
 
 
 buffer_limit = ChunkSize.K256
@@ -26,9 +34,18 @@ buffer_limit = ChunkSize.K256
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
 
+server_dir = Path(f"{get_documents_dir()}/toomanychats/server")
+server_dir.mkdir(parents=True, exist_ok=True)
+ssl_dir = Path(f"{server_dir}/ssl")
+cert_path = f"{ssl_dir}/cert.pem"
+cert_key_path = f"{ssl_dir}/private_key.pem"
+
+if not check_cert(cert_path):
+    generate_cert()
+
 ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-ssl_context.load_cert_chain(certfile='ssl/cert.pem', 
-                            keyfile='ssl/private_key.pem')
+ssl_context.load_cert_chain(certfile=cert_path, 
+                            keyfile=cert_key_path)
 ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3  
 
 SERVER_RSA = RSA.generate(2048)
@@ -54,7 +71,7 @@ class UserAuthInfo(TypedDict):
 auth_users: dict[str, UserInfo] = {}
 
 config = ConfigParser()
-with open('server.conf.enc', 'rb') as f:
+with open(f'{server_dir}/server.conf.enc', 'rb') as f:
     cfg_enc = f.read()
     key = input('Enter encryption key: ').rjust(16, '0')[:16]
     cfg_dec = decrypt_aes(cfg_enc, key=key.encode())
@@ -178,7 +195,7 @@ async def secure_connect(writer: StreamWriter) -> tuple[str, int] | None:
     print(f"[!] {cli_addr[0]}:{cli_addr[1]} tries to connect.")
 
     # Sending copy of certificate to the client
-    with open("./ssl/cert.pem", "rb") as f:
+    with open(f"{ssl_dir}/cert.pem", "rb") as f:
         cert = f.read()
     writer.write(len(cert).to_bytes(4, "big"))
     await writer.drain()
