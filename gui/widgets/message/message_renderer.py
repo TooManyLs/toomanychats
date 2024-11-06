@@ -1,12 +1,17 @@
 from datetime import datetime
 import os
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from ..components import TextBubble, SingleImage, VideoWidget, DocAttachment
-from ..utils.tools import generate_name
+from ..utils.tools import generate_name, CLIENT_DIR
 from . import Tags, MsgType
+
+
+documents_dir = Path(f"{CLIENT_DIR}/downloads/documents")
 
 class MessageRenderer():
     def __init__(self, layout: QVBoxLayout, parent: QWidget) -> None:
@@ -97,7 +102,8 @@ class MessageRenderer():
 def save_file(data: bytes, basename: str = "") -> str:
     if not basename:
         basename = generate_name()
-    with open(f"./cache/attachments/{basename}", "wb") as f:
+    documents_dir.mkdir(parents=True, exist_ok=True)
+    with open(f"{documents_dir}/{basename}", "wb") as f:
         f.write(data)
     
-    return os.path.abspath(f"./cache/attachments/{basename}")
+    return f"{documents_dir}/{basename}"

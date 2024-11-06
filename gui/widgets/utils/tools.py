@@ -119,3 +119,6 @@ def get_documents_dir() -> Path:
     documents_dir.mkdir(parents=True, exist_ok=True)
 
     return documents_dir
+
+SERVER_DIR = Path(f"{get_documents_dir()}/toomanychats/server")
+CLIENT_DIR = Path(f"{get_documents_dir()}/toomanychats/client")

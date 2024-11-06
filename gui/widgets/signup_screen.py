@@ -1,5 +1,6 @@
 import os
 from ssl import SSLSocket
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -20,7 +21,11 @@ from .utils.encryption import (
     pack_data
     )
 from .components import TextField, TOTPDialog
-from .utils.tools import get_device_id
+from .utils.tools import get_device_id, CLIENT_DIR
+
+
+keys_dir = Path(f"{CLIENT_DIR}/keys")
+keys_dir.mkdir(parents=True, exist_ok=True)
 
 class SignUp(QWidget):
     def __init__(self, stacked_layout, s: SSLSocket | None,
@@ -228,7 +233,7 @@ class SignUp(QWidget):
             self.s.send(pack_data(data, self.server_pubkey))
             ok = self.s.recv(1024).decode('utf-8')
             if "[+]" in ok:
-                with open(f"keys/{name}_private.pem", "wb") as f:
+                with open(f"{keys_dir}/{name}_private.pem", "wb") as f:
                     f.write(pvtkey)
             else:
                 self.inv_taken.setText(

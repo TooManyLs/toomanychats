@@ -5,6 +5,7 @@ import socket
 import ssl
 from ssl import SSLSocket
 from configparser import ConfigParser
+from pathlib import Path
 
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import (
@@ -17,7 +18,9 @@ from Crypto.PublicKey import RSA
 
 from widgets import EnterWidget, SignIn, SignUp, ChatWidget
 from widgets.components import Overlay, ChatRoomList, Splitter, ScrollArea
+from widgets.utils.tools import CLIENT_DIR
 
+CLIENT_DIR.mkdir(parents=True, exist_ok=True)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -40,9 +43,21 @@ class MainWindow(QMainWindow):
             self.s.shutdown(socket.SHUT_RDWR)
             self.s.close()
 
-        # retrieving host and port from config.ini
+        # Retrieving host and port from servers.ini
         config = ConfigParser()
-        config.read("./gui/config.ini")
+        config.read(f"{CLIENT_DIR}/servers.ini")
+
+        # If servers.ini is empty or doesn't exist, write one with defaults
+        if not config.sections():
+            defaults = ["Current", "localhost"]
+            for section in defaults:
+                config.add_section(section)
+                config.set(section, "host", "127.0.0.1")
+                config.set(section, "port", "5002")
+
+            with open(f"{CLIENT_DIR}/servers.ini", "w") as cfg:
+                config.write(cfg)
+
         SERVER_HOST = config.get("Current", "host")
         SERVER_PORT = config.getint("Current", "port")
 
@@ -56,7 +71,9 @@ class MainWindow(QMainWindow):
     def server_connect(self, addr: tuple[str, int]) -> None:
 
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-        ssl_path = f"./ssl/servers/{addr[0]}.pem"
+        ssl_dir = Path(f"{CLIENT_DIR}/ssl")
+        ssl_dir.mkdir(parents=True, exist_ok=True)
+        ssl_path = f"{ssl_dir}/{addr[0]}.pem"
         ssl_exist = os.path.exists(ssl_path)
 
         try:

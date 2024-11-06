@@ -3,8 +3,10 @@ import subprocess
 import sys
 from configparser import ConfigParser
 from io import StringIO
+from pathlib import Path
 
 from gui.widgets.utils.encryption import encrypt_aes
+from gui.widgets.utils.tools import SERVER_DIR
 
 
 db_password = input('Enter the password for database: ')
@@ -70,6 +72,8 @@ conf = output.getvalue()
 
 encrypted_conf, _ = encrypt_aes(conf.encode(), key=encryption_key.encode())
 
-with open('server.conf.enc', 'wb') as cfg:
+SERVER_DIR.mkdir(parents=True, exist_ok=True)
+
+with open(f'{SERVER_DIR}/server.conf.enc', 'wb') as cfg:
     cfg.write(encrypted_conf)
 

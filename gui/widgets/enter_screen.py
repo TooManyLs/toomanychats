@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 import os
 from ssl import SSLSocket
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -16,7 +17,10 @@ from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, Signal
 
 from .components import CustomMenu, ServerDialog
+from .utils.tools import CLIENT_DIR
 
+
+servers_ini = f"{CLIENT_DIR}/servers.ini"
 
 class EnterWidget(QWidget):
     reinit = Signal()
@@ -49,7 +53,7 @@ class EnterWidget(QWidget):
         self.menu = CustomMenu(offset=True)
 
         self.config = ConfigParser()
-        self.config.read("./gui/config.ini")
+        self.config.read(servers_ini)
 
         self.servernames = []
         for server in self.config.sections():
@@ -162,7 +166,7 @@ class EnterWidget(QWidget):
         self.config.set("Current", "host", host)
         self.config.set("Current", "port", str(port))
 
-        with open("./gui/config.ini", "w") as cfg:
+        with open(servers_ini, "w") as cfg:
             self.config.write(cfg)
 
         self.reinit.emit()
@@ -190,7 +194,7 @@ class EnterWidget(QWidget):
             self.config.set(new_server, "host", host)
             self.config.set(new_server, "port", port)
 
-            with open("./gui/config.ini", "w") as cfg:
+            with open(servers_ini, "w") as cfg:
                 self.config.write(cfg)
 
         self.change_server(host, port)

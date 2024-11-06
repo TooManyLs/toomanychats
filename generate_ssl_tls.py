@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
 
-from gui.widgets.utils.tools import get_documents_dir
+from gui.widgets.utils.tools import SERVER_DIR
 
 def generate_cert():
     private_key = rsa.generate_private_key(
@@ -29,7 +29,7 @@ def generate_cert():
         .not_valid_after(datetime.now(timezone.utc) + timedelta(days=365))
         .sign(private_key, hashes.SHA256())
     )
-    ssl_dir = Path(f"{get_documents_dir()}/toomanychats/server/ssl")
+    ssl_dir = Path(f"{SERVER_DIR}/ssl")
     ssl_dir.mkdir(parents=True, exist_ok=True)
 
     with open(f"{ssl_dir}/private_key.pem", "wb") as f:

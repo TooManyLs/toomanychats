@@ -1,4 +1,5 @@
 from ssl import SSLSocket
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -21,8 +22,12 @@ from .utils.encryption import (
     pack_data,
     unpack_data,
     )
-from .utils.tools import get_device_id
+from .utils.tools import get_device_id, CLIENT_DIR
 from .components import TextField
+
+
+keys_dir = Path(f"{CLIENT_DIR}/keys")
+keys_dir.mkdir(parents=True, exist_ok=True)
 
 class AuthError(Exception):
     def __init__(self, *args: object) -> None:
@@ -175,7 +180,7 @@ class SignIn(QWidget):
                     self.s.send(my_pubkey)
                     data = self.s.recv(2048)
                 else:
-                    with open(f"keys/{name}_private.pem", "rb") as f:
+                    with open(f"{keys_dir}/{name}_private.pem", "rb") as f:
                         self.my_pvtkey = RSA.import_key(f.read())
                 my_cipher = PKCS1_OAEP.new(self.my_pvtkey)
                 
@@ -224,7 +229,7 @@ class SignIn(QWidget):
             return
         elif resp == b"passed":
             if self.new:
-                with open(f"keys/{name}_private.pem", "wb") as f:
+                with open(f"{keys_dir}/{name}_private.pem", "wb") as f:
                     f.write(self.my_pvtkey.export_key())
         else:
             # Too many attempts 

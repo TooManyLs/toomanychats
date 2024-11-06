@@ -5,11 +5,14 @@ from ssl import SSLSocket
 from uuid import UUID
 from PySide6.QtCore import QObject
 from threading import Thread
+from pathlib import Path
 
 from ...message import ChunkSize, Sender, MsgType
+from ...utils.tools import CLIENT_DIR
 
 video_extensions = (".mp4", ".m4a", ".m4v", ".3gp", ".3g2", ".avi", ".mkv",
                     ".webm", ".f4v", ".lrv")
+documents_dir = Path(f"{CLIENT_DIR}/downloads/documents")
 
 class SenderServiceWorker(QObject):
     def __init__(
@@ -44,8 +47,9 @@ class SenderServiceWorker(QObject):
 
         # Move file to an attachments directory if it is a temporary file
         temp_dir = tempfile.gettempdir()
+        documents_dir.mkdir(parents=True, exist_ok=True)
         if temp_dir in path:
-            shutil.move(path, f"./cache/attachments/{filename}")
+            shutil.move(path, f"{documents_dir}/{filename}")
 
         if ext == ".gif":
             typ = MsgType.IMAGE

@@ -3,6 +3,7 @@ import subprocess
 import platform
 import shutil
 from datetime import datetime
+from pathlib import Path
 import tempfile
 
 from PySide6.QtWidgets import (
@@ -16,8 +17,10 @@ from PySide6.QtGui import (
     )
 
 from .custom_menu import CustomMenu
-from ..utils.tools import compress_image, generate_name
+from ..utils.tools import compress_image, generate_name, CLIENT_DIR
 
+images_dir = Path(f"{CLIENT_DIR}/downloads/images")
+images_dir.mkdir(parents=True, exist_ok=True)
 
 class SingleImage(QLabel):
     def __init__(
@@ -35,9 +38,6 @@ class SingleImage(QLabel):
             self.setPixmap(self._pixmap)
         else:
             if self.path[-4:] == ".gif":
-                new_path = f"./cache/img/{generate_name()}.gif"
-                shutil.copyfile(path, new_path)
-                path = new_path
                 mov = QMovie(path)
                 self.setMovie(mov)
                 mov.start()
@@ -84,7 +84,7 @@ class SingleImage(QLabel):
 
     def check_path(self):
         if not self.path and not isinstance(self._pixmap, QMovie):
-            self.path = f"./cache/img/{generate_name()}.jpg"
+            self.path = f"{images_dir}/{generate_name()}.jpg"
             self._pixmap.save(self.path)
 
     def mousePressEvent(self, ev):

@@ -3,6 +3,7 @@ from ssl import SSLSocket
 import tempfile
 from time import sleep
 from uuid import uuid4
+from pathlib import Path
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QSpacerItem, QSizePolicy,
@@ -17,7 +18,7 @@ from Crypto.PublicKey.RSA import RsaKey
 from PIL import UnidentifiedImageError
 
 
-from .utils.tools import compress_image, qimage_to_bytes
+from .utils.tools import compress_image, qimage_to_bytes, CLIENT_DIR
 from .components import (TextBubble, SingleImage, ScrollArea,
                          DocAttachment,AttachDialog,ChatHeader,
                          TextArea, VideoWidget)
@@ -26,6 +27,8 @@ from .utils.services import SenderServiceWorker, ReceiverServiceWorker
 
 
 buffer_limit = ChunkSize.K256
+keys_dir = Path(f"{CLIENT_DIR}/keys")
+keys_dir.mkdir(parents=True, exist_ok=True)
 
 class ChatWidget(QWidget):
     def __init__(self, s: SSLSocket | None, 
@@ -115,7 +118,7 @@ class ChatWidget(QWidget):
 
     def listen_for_messages(self, name: str) -> None:
         self.name = name
-        with open(f"keys/{name}_private.pem", "rb") as f:
+        with open(f"{keys_dir}/{name}_private.pem", "rb") as f:
             my_pvtkey = RSA.import_key(f.read())
         self.my_cipher = PKCS1_OAEP.new(my_pvtkey)
 
@@ -211,8 +214,6 @@ class ChatWidget(QWidget):
                     temp_dir = tempfile.gettempdir()
                     if temp_dir in f:
                         os.remove(f)
-
-                    f = compressed
                 else:
                     self.send_worker.send_file(f, self.server_pubkey,
                                                self.room_id)

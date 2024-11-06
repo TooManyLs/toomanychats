@@ -4,6 +4,7 @@ import platform
 import subprocess
 from datetime import datetime
 import shutil
+from pathlib import Path
 
 from PySide6.QtWidgets import (QVBoxLayout, QHBoxLayout, QLineEdit,
                                QLabel, QPushButton, QSizePolicy,
@@ -15,7 +16,10 @@ from PySide6.QtCore import Qt, QEvent, QMimeData
 
 from . import EllipsisLabel, CustomMenu
 from .image_preview import ImagePreview
+from ..utils.tools import CLIENT_DIR
 
+
+documents_dir = Path(f"{CLIENT_DIR}/downloads/documents")
 picture_type = ('.bmp', '.cur', '.gif', '.icns', '.ico', '.jpeg', '.jpg', 
                 '.pbm', '.pgm', '.png', '.ppm', '.tga', '.tif', '.tiff', 
                 '.webp', '.xbm', '.jfif', '.dds', '.cr2', '.dng', '.heic', 
@@ -104,9 +108,10 @@ class DocAttachment(QFrame):
             self.setStyleSheet("#secondary{color: gray;}")
         else:
             temp_dir = tempfile.gettempdir()
+            documents_dir.mkdir(parents=True, exist_ok=True)
             if temp_dir in path:
                 filename = os.path.basename(path)
-                self.path = f"./cache/attachments/{filename}"
+                self.path = f"{documents_dir}/{filename}"
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
 

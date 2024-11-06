@@ -26,7 +26,7 @@ from gui.widgets.message import (
         MsgType,
         )
 from generate_ssl_tls import generate_cert, check_cert
-from gui.widgets.utils.tools import get_documents_dir
+from gui.widgets.utils.tools import SERVER_DIR
 
 
 buffer_limit = ChunkSize.K256
@@ -34,9 +34,8 @@ buffer_limit = ChunkSize.K256
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 5002
 
-server_dir = Path(f"{get_documents_dir()}/toomanychats/server")
-server_dir.mkdir(parents=True, exist_ok=True)
-ssl_dir = Path(f"{server_dir}/ssl")
+SERVER_DIR.mkdir(parents=True, exist_ok=True)
+ssl_dir = Path(f"{SERVER_DIR}/ssl")
 cert_path = f"{ssl_dir}/cert.pem"
 cert_key_path = f"{ssl_dir}/private_key.pem"
 
@@ -71,7 +70,7 @@ class UserAuthInfo(TypedDict):
 auth_users: dict[str, UserInfo] = {}
 
 config = ConfigParser()
-with open(f'{server_dir}/server.conf.enc', 'rb') as f:
+with open(f'{SERVER_DIR}/server.conf.enc', 'rb') as f:
     cfg_enc = f.read()
     key = input('Enter encryption key: ').rjust(16, '0')[:16]
     cfg_dec = decrypt_aes(cfg_enc, key=key.encode())
