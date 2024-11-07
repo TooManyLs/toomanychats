@@ -37,9 +37,11 @@ class SenderServiceWorker(QObject):
                 room_id, basename=".jpg"
                 )
 
-    def send_file(
-            self, path: str, public_key: bytes, room_id: UUID
-    ) -> None:
+    def send_file(self, path: str, public_key: bytes, room_id: UUID) -> None:
+        t = Thread(target=self._send_file, args=(path, public_key, room_id))
+        t.start()
+
+    def _send_file(self, path: str, public_key: bytes, room_id: UUID) -> None:
         ext = os.path.splitext(path)[1]
         filename = os.path.basename(path)
         with open(path, "rb") as f:
