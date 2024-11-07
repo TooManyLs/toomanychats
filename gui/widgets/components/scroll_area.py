@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import QScrollArea
 
 class ScrollArea(QScrollArea):
@@ -20,6 +20,7 @@ class ScrollArea(QScrollArea):
             QScrollBar:vertical {
                 width: 7px;
                 background-color: transparent;
+                border: none;
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical
             {
@@ -37,8 +38,15 @@ class ScrollArea(QScrollArea):
             }
             """
             )
+        self.verticalScrollBar().setVisible(False)
+        self.hide_timer = QTimer(self)
+        self.hide_timer.setSingleShot(True)
+        self.hide_timer.timeout.connect(self._hide_scrollbar)
 
     def wheelEvent(self, arg__1):
+        self.verticalScrollBar().setVisible(True)
+        self.hide_timer.start(1500)
+
         self.old_max = self.verticalScrollBar().maximum()
         self.relative_position = self.verticalScrollBar().value() / self.old_max if self.old_max > 0 else 0
         super().wheelEvent(arg__1)
@@ -48,3 +56,15 @@ class ScrollArea(QScrollArea):
             new_value = self.relative_position * max
             self.verticalScrollBar().setValue(new_value)
         self.old_max = max
+
+    def enterEvent(self, event) -> None:
+        self.verticalScrollBar().setVisible(True)
+        self.hide_timer.start(1500)
+        return super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self.hide_timer.start(1500)
+        return super().leaveEvent(event)
+
+    def _hide_scrollbar(self) -> None:
+        self.verticalScrollBar().setVisible(False)

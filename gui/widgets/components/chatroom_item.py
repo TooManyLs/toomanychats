@@ -26,7 +26,7 @@ class ChatRoomItem(QFrame):
         self.time.setObjectName("time")
 
         self.hor_layout = QHBoxLayout(self)
-        self.hor_layout.setContentsMargins(7, 10, 10, 10)
+        self.hor_layout.setContentsMargins(10, 10, 10, 10)
         self.text_layout = QVBoxLayout()
         self.text_layout.setContentsMargins(7, 0, 0, 0)
 
@@ -39,7 +39,7 @@ class ChatRoomItem(QFrame):
         self.t_t.addWidget(self.time, alignment=Qt.AlignmentFlag.AlignRight)
         
         # self.title.setFont(font)
-        self.last_msg = EllipsisLabel("Those feet... MMMMMmmmM. I want them toes on my face", elide="right")
+        self.last_msg = EllipsisLabel("There was absolutely nothing crazy written here", elide="right")
         font = self.last_msg.font()
         font.setBold(False)
         self.last_msg.setFont(font)
