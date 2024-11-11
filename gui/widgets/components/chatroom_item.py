@@ -2,10 +2,18 @@ from datetime import datetime
 from enum import Enum
 
 from PySide6.QtGui import Qt
-from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QSpacerItem,
+    QVBoxLayout,
+)
 
 from . import EllipsisLabel
 from .image_preview import ImagePreview
+
 
 class ChatType(Enum):
     PRIVATE = 1
@@ -30,19 +38,26 @@ class ChatRoomItem(QFrame):
         self.text_layout = QVBoxLayout()
         self.text_layout.setContentsMargins(7, 0, 0, 0)
 
-        self.pic = ImagePreview(self.picture, 50, 50, radius=25, size=256)
+        self.pic = ImagePreview(self.picture, 50, 50, size=256)
 
         self.title = EllipsisLabel(title, elide="right")
         self.title.setObjectName("chat-title")
         self.t_t = QHBoxLayout()
         self.t_t.addWidget(self.title)
+        self.t_t.addSpacerItem(
+            QSpacerItem(
+                0, 0, QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Minimum
+            )
+        )
         self.t_t.addWidget(self.time, alignment=Qt.AlignmentFlag.AlignRight)
         
         # self.title.setFont(font)
-        self.last_msg = EllipsisLabel("There was absolutely nothing crazy written here", elide="right")
-        font = self.last_msg.font()
-        font.setBold(False)
-        self.last_msg.setFont(font)
+        self.last_msg = EllipsisLabel(
+            "There was absolutely nothing crazy written here",
+            elide="right",
+            bold=False
+        )
         self.last_msg.setObjectName("lastmsg")
 
         self.text_layout.addLayout(self.t_t)
