@@ -84,7 +84,7 @@ class SingleImage(QLabel):
 
     def check_path(self):
         if not self.path and not isinstance(self._pixmap, QMovie):
-            self.path = f"{images_dir}/{generate_name()}.jpg"
+            self.path = f"{images_dir}/{generate_name()}.webp"
             self._pixmap.save(self.path)
 
     def mousePressEvent(self, ev):
@@ -103,9 +103,9 @@ class SingleImage(QLabel):
 
         if not os.path.exists(self.path) and isinstance(self._pixmap, QImage):
             self.temp_file = tempfile.NamedTemporaryFile(
-                delete=False, delete_on_close=True, suffix=".jpg"
+                delete=False, delete_on_close=True, suffix=".webp"
             )
-            self._pixmap.save(self.temp_file.name, "JPEG")
+            self._pixmap.save(self.temp_file.name, "WEBP")
             self.path = self.temp_file.name
         else:
             self.path = os.path.abspath(self.path)
@@ -204,10 +204,10 @@ class SingleImage(QLabel):
         if self.path.endswith(".gif"):
             default = os.path.basename(self.path)
         else:
-            default = generate_name() + ".jpg"
+            default = generate_name() + ".webp"
         _, ext = os.path.splitext(default)
         filters = {
-            ".jpg": "JPEG Image (*.jpg)",
+            ".webp": "WebP Image (*.webp)",
             ".gif": "GIF Image (*.gif)"
                    }
         file_name, _ = QFileDialog.getSaveFileName(
@@ -218,7 +218,7 @@ class SingleImage(QLabel):
             if isinstance(self._pixmap, QMovie):
                 shutil.copy(self.path, file_name)
             else:
-                self._pixmap.save(file_name)
+                self._pixmap.save(file_name, "WEBP")
                 self.path = file_name
     
     def copy(self):
