@@ -8,9 +8,9 @@ pycparser==2.22
 pycryptodome==3.20.0
 pyotp==2.9.0
 pypng==0.20220715.0
-pyside6==6.7.2
-pyside6-addons==6.7.2
-pyside6-essentials==6.7.2
+pyside6==6.8.0
+pyside6-addons==6.8.0
+pyside6-essentials==6.8.0
 qrcode==7.4.2
-shiboken6==6.7.2
+shiboken6==6.8.0
 typing-extensions==4.12.2
