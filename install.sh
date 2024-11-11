@@ -4,5 +4,5 @@ python -m venv env
 source env/bin/activate
 pip install -r requirements.txt
 
-python setup.py
+python setup_server_env.py
 
