@@ -172,6 +172,8 @@ class TOTPDialog(Dialog):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Return:
             self.verify.click()
+        elif event.key() == Qt.Key.Key_Escape:
+            return
         return super().keyPressEvent(event)
 
     def dialog_accept(self):

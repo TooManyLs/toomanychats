@@ -10,11 +10,19 @@ class Dialog(QDialog):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Escape or event.key() == Qt.Key.Key_Return:
-            event.ignore()
+    def dialog_accept(self):
+        pass
+
+    def dialog_reject(self):
+        pass
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() == Qt.Key.Key_Return and not event.modifiers():
+            self.dialog_accept()
+        elif event.key() == Qt.Key.Key_Escape and not event.modifiers():
+            self.dialog_reject()
         else:
-            super().keyPressEvent(event)
+            return super().keyPressEvent(event)
 
     def paintEvent(self, event):
         painter = QPainter(self)
