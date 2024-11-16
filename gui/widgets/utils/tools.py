@@ -54,7 +54,7 @@ def cache_check(max_size: int):
 def compress_image(image_path: str="", max_size: int = 1280) -> QImage:
     """Compresses image into WEBP with maximum dimension
     size of ```max_size```.
-    If ```max_size``` <= 128 compression quality cut to 30%(default: 90%)
+    If ```max_size``` <= 128 compression quality cut to 30%(default: 75%)
     """
 
     if not image_path:
@@ -63,7 +63,7 @@ def compress_image(image_path: str="", max_size: int = 1280) -> QImage:
 
         buffer = QBuffer()
         buffer.open(QBuffer.OpenModeFlag.ReadWrite)
-        img.save(buffer, "WEBP")
+        img.save(buffer)
         byte_arr = buffer.data().data()
     else:
         with open(image_path, 'rb') as f:
@@ -86,9 +86,11 @@ def compress_image(image_path: str="", max_size: int = 1280) -> QImage:
 
         img = img.convert("RGB")
         byte_arr = BytesIO()
-        img.save(byte_arr, format='WEBP', quality=75 if max_size > 128 else 30)
+        img.save(byte_arr, format="WEBP",
+                 quality=75 if max_size > 128 else 30,
+                 optimize=True)
         byte_arr = byte_arr.getvalue()
-        compressed_qimage = QImage.fromData(byte_arr, "WEBP")
+        compressed_qimage = QImage.fromData(byte_arr)
 
     return compressed_qimage
 

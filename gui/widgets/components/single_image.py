@@ -83,7 +83,8 @@ class SingleImage(QLabel):
         self.counter = 0
 
     def check_path(self):
-        if not self.path and not isinstance(self._pixmap, QMovie):
+        if (not os.path.exists(self.path) 
+                and not isinstance(self._pixmap, QMovie)):
             self.path = f"{images_dir}/{generate_name()}.webp"
             self._pixmap.save(self.path)
 
@@ -105,7 +106,7 @@ class SingleImage(QLabel):
             self.temp_file = tempfile.NamedTemporaryFile(
                 delete=False, delete_on_close=True, suffix=".webp"
             )
-            self._pixmap.save(self.temp_file.name, "WEBP")
+            self._pixmap.save(self.temp_file.name)
             self.path = self.temp_file.name
         else:
             self.path = os.path.abspath(self.path)
@@ -218,7 +219,7 @@ class SingleImage(QLabel):
             if isinstance(self._pixmap, QMovie):
                 shutil.copy(self.path, file_name)
             else:
-                self._pixmap.save(file_name, "WEBP")
+                self._pixmap.save(file_name)
                 self.path = file_name
     
     def copy(self):

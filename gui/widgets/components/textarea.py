@@ -38,7 +38,7 @@ class TextArea(QTextEdit):
     def insertFromMimeData(self, source):
         if source.hasImage():
             with tempfile.NamedTemporaryFile(
-                "w+b", suffix=".jpg", delete=False,
+                "w+b", suffix=".webp", delete=False,
                 delete_on_close=False
             ) as tmp:
                 tmp.write(qimage_to_bytes(source.imageData()))
