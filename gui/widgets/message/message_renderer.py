@@ -50,7 +50,14 @@ class MessageRenderer():
             self, header: Tags, msg: bytes, pos: int, own: bool
     ) -> None:
         timestamp, name, data = self._get_data(header, msg, own)
-        message = SingleImage(self.p, QImage.fromData(data),
+
+        path = None
+        _, ext = os.path.splitext(header.get('basename', ''))
+        if ext == ".gif":
+            path = save_file(data, header.get('basename', ''))
+
+        message = SingleImage(self.p,
+                              path if path else QImage.fromData(data),
                               name, timestamp)
 
         self._insert_message(message, pos, own)
