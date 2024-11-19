@@ -1,12 +1,12 @@
 from asyncio.streams import StreamReader
 from ssl import SSLSocket
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 
-
 from ..utils.encryption import unpack_data, decrypt_aes
-from . import ChunkSize, HeaderParser, Tags
+from . import ChunkSize, HeaderParser, Tags, MsgType, FILELIKE
 
 
 def decrypt_message(cipher: PKCS1OAEP_Cipher, data: bytes) -> bytes:
@@ -90,6 +90,16 @@ class AsyncReceiver():
 
                 # Separate header tags from message content
                 if chunk == b'<!DATA>':
+                    try:
+                        msg_type = MsgType(chunks[1])
+                        if msg_type in FILELIKE:
+                            # WARN: Should be checked whether id 
+                            # already exists in blob storage
+                            dl_id = self.cipher.encrypt(uuid4().bytes)
+                            chunks.append(len(dl_id).to_bytes(4, "big"))
+                            chunks.append(dl_id)
+                    except ValueError:
+                        pass
                     # Generate UTC timestamp on the serverside
                     timestamp = self.cipher.encrypt(str(
                             datetime.now().astimezone(UTC).timestamp()

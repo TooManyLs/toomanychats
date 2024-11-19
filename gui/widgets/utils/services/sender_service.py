@@ -34,7 +34,7 @@ class SenderServiceWorker(QObject):
     ) -> None:
         self.sender_wk.send_message(
                 data, MsgType.IMAGE, public_key,
-                room_id, basename=".jpg"
+                room_id, basename=".webp"
                 )
 
     def send_file(self, path: str, public_key: bytes, room_id: UUID) -> None:

@@ -1,9 +1,18 @@
+import os
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 
-from . import Tags, MsgType, msg_encrypt
+from . import (
+    Tags,
+    MsgType,
+    msg_encrypt,
+    FileTags,
+    VMediaTags,
+    FILELIKE,
+    PICTURE_EXT,
+)
 
 
 class HeaderParser():
@@ -14,81 +23,100 @@ class HeaderParser():
         self.tags = self._get_tags()
 
     def _get_tags(self) -> Tags:
-        typ = MsgType.TEXT
-        basename = ""
-        room_id = uuid4()
-        timestamp = datetime.now()
-
+        """
+        Walks through the message header bytestring and puts it in
+        the appropiate TypedDict or type ```Tags```.
+        """
         tags = []
-
-        tag_counter = 0
         pos = 0
         while True:
-            if len(tags) >= 3:
-                if tag_counter > 5:
-                    break
-            length = int.from_bytes(self._header[pos:pos + 4], "big")
-            pos += 4
-            tag = self._header[pos:pos + length]
-            if not tag:
+            length = int.from_bytes(self._header[pos:pos+4], "big")
+            if length == 0:
                 break
+            pos += 4
+
+            tag = self._header[pos:pos+length]
+            pos += length
 
             tags.append(tag)
 
-            pos += length
-            tag_counter += 1
-
         try:
-            typ = MsgType(tags[0])
+            msg_type = MsgType(tags[0])
         except ValueError:
-            typ = MsgType.UNKNOWN
+            msg_type = MsgType.UNKNOWN
 
-        if typ == MsgType.SERVER:
-            # Return message_type as the only relevant info for this type
-            return Tags(
-                message_type = typ,
-                message_length = 0,
-                is_file = False,
-                basename = "",
-                chatroom_id = room_id,
-                timestamp = timestamp,
-            )
+        msg_len = int.from_bytes(tags[1], "big")
+        room_id = UUID(bytes=self._decrypt(tags[2]))
+        timestamp = datetime.fromtimestamp(
+            float(self._decrypt(tags[-1])), self._tz
+        )
+        
+        base_tags = {
+            "message_type": msg_type,
+            "message_length": msg_len,
+            "chatroom_id": room_id,
+            "timestamp": timestamp,
+        }
 
-        length = int.from_bytes(tags[1])
-        is_file = tags[2] != b'0'
+        if msg_type not in FILELIKE:
+            return Tags(**base_tags)
 
         basename = self._decrypt(tags[3]).decode()
+        dl_id = UUID(bytes=self._decrypt(tags[-2]))
 
-        room_id = UUID(bytes=self._decrypt(tags[4]))
+        _, ext = os.path.splitext(basename)
+        if msg_type != MsgType.VIDEO and ext not in PICTURE_EXT:
+            return FileTags(**{
+                **base_tags,
+                "basename": basename,
+                "download_id": dl_id,
+            })
 
-        timestamp = datetime.fromtimestamp(
-            float(self._decrypt(tags[5])), self._tz
-        )
+        preview = tags[4] != b'0'
 
-        return Tags(
-            message_type = typ,
-            message_length = length,
-            is_file = is_file,
-            basename = basename,
-            chatroom_id=room_id,
-            timestamp = timestamp,
-        )
+        return VMediaTags(**{
+            **base_tags,
+            "basename": basename,
+            "preview": preview,
+            "download_id": dl_id,
+        })
 
     def _decrypt(self, data) -> bytes:
         return self._cipher.decrypt(data)
 
 def generate_header(tags: Tags, public_key: bytes) -> list[bytes]:
+    """
+    Constructs bytestring header containing information about message.
+
+    Args:
+        tags: ```Tags```
+            TypedDict of type Tags.
+        public_key: ```bytes```
+            Public RSA key of recepient.
+    """
     tag_list: list[bytes] = []
 
-    basename = tags["basename"].encode()
+    msg_type = tags["message_type"]
     room_id = tags["chatroom_id"].bytes
     timestamp = str(tags["timestamp"].timestamp()).encode()
 
-    tag_list.append(tags["message_type"].value)
+    tag_list.append(msg_type.value)
     tag_list.append(str(tags["message_length"].to_bytes(4, "big")).encode())
-    tag_list.append(b'1' if tags["is_file"] else b'0')
-    tag_list.append(msg_encrypt(basename, public_key))
     tag_list.append(msg_encrypt(room_id, public_key))
+
+    # Since python does not allow for isinstance check on TypedDict
+    # checking type by MsgType and file extension which should be as
+    # reliable but ugly
+    if msg_type in FILELIKE:
+        tag_list.append(msg_encrypt(tags["basename"].encode(), public_key)) #type: ignore
+
+        _, ext = os.path.splitext(tags["basename"]) #type: ignore
+        if msg_type == MsgType.VIDEO or ext in PICTURE_EXT:
+            tag_list.append(b'1' if tags["preview"] else b'0') #type: ignore
+
+        tag_list.append(msg_encrypt(tags["download_id"].bytes, public_key)) #type: ignore
+
+
     tag_list.append(msg_encrypt(timestamp, public_key))
 
     return tag_list

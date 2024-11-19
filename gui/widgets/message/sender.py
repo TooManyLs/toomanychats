@@ -1,10 +1,18 @@
 from asyncio.streams import StreamWriter
+import os
 from ssl import SSLSocket
 from uuid import UUID
 
 from ..utils.encryption import pack_data, encrypt_aes
-from . import ChunkSize, MsgType, Tags, generate_header, msg_encrypt
-
+from . import (
+    ChunkSize,
+    MsgType,
+    Tags,
+    generate_header,
+    msg_encrypt,
+    FILELIKE,
+    PICTURE_EXT,
+)
 
 
 class Sender():
@@ -25,11 +33,20 @@ class Sender():
 
         self._send_block(typ.value)
         self._send_block(len(msg).to_bytes(4, "big"))
-
-        self._send_block(b'1' if basename else b'0')
-        self._send_block(msg_encrypt(basename.encode(), self.server))
-
         self._send_block(msg_encrypt(chatroom_id.bytes, self.server))
+
+        if typ in FILELIKE:
+            print(basename)
+            self._send_block(msg_encrypt(basename.encode(), self.server))
+
+            _, ext = os.path.splitext(basename)
+            if typ == MsgType.VIDEO or ext in PICTURE_EXT:
+                # This one should tell a server whether message
+                # should have preview or not 
+                # Client should send both preveiw and not compressed content
+                # Thus preview byte is always "1"(True) on client side
+                # as client is responsible for sending it
+                self._send_block(b'1')
 
         # Separator that differentiates header tags from actual data
         self._send_block(b'<!DATA>')
@@ -55,7 +72,7 @@ class AsyncSender():
         self.chunk_size = chunk_size.value
 
     async def send_message(
-            self, tags: Tags, msg: bytes, sock: StreamWriter, pubkey: bytes
+        self, tags: Tags, msg: bytes, sock: StreamWriter, pubkey: bytes
     ) -> None:
 
         tag_list = generate_header(tags, pubkey)
@@ -80,3 +97,4 @@ class AsyncSender():
         await sock.drain()
         sock.write(data)
         await sock.drain()
+
