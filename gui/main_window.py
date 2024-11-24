@@ -6,6 +6,7 @@ import ssl
 from ssl import SSLSocket
 from configparser import ConfigParser
 from pathlib import Path
+import tempfile
 from uuid import UUID, uuid4
 
 from PySide6.QtCore import Qt
@@ -20,7 +21,7 @@ from Crypto.PublicKey import RSA
 
 from widgets import EnterWidget, SignIn, SignUp, ChatWidget
 from widgets.components import Overlay, ChatRoomList, Splitter, ScrollArea
-from widgets.utils.tools import CLIENT_DIR
+from widgets.utils.tools import CLIENT_DIR, qimage_to_bytes
 
 CLIENT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -202,29 +203,42 @@ class MainWindow(QMainWindow):
 
 
     def dragEnterEvent(self, event):
-        if event.source():
+        data = event.mimeData()
+        if (event.source()
+                or self.main_widget.room_id == UUID(int=0)
+                or (hasattr(self.main_widget, "dialog")
+                    and self.main_widget.dialog.isVisible())
+                ):
             return
-        try:
-            if self.main_widget.dialog.isVisible():
-                return
-        except AttributeError:
+        if not(data.hasUrls() or data.hasImage()):
+            event.ignore()
+        if data.hasImage():
             pass
-        if event.mimeData().hasUrls() and self.stacked_layout.currentIndex() == 3:
-            for url in event.mimeData().urls():
+        elif (data.hasUrls()
+                and isinstance(self.stacked_layout.currentWidget(), Splitter)):
+            for url in data.urls():
                 if os.path.isdir(url.toLocalFile()):
                     event.ignore()
                     return
-            event.acceptProposedAction()
-            self.overlay.show()
-        else:
-            event.ignore()
+        event.acceptProposedAction()
+        self.overlay.show()
 
     def dragLeaveEvent(self, event):
         self.overlay.hide()
         return super().dragLeaveEvent(event)
 
     def dropEvent(self, event):
-        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        data = event.mimeData()
+        if data.hasImage():
+            with tempfile.NamedTemporaryFile(
+                "w+b", suffix=".webp", delete=False,
+                delete_on_close=False
+            ) as tmp:
+                tmp.write(qimage_to_bytes(data.imageData()))
+                files = [tmp.name]
+        else:
+            files = [u.toLocalFile() for u in data.urls()]
+
         self.main_widget.attach_file(files)
 
     def keyPressEvent(self, event) -> None:
