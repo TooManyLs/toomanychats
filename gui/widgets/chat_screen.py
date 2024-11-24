@@ -2,7 +2,7 @@ import os
 from ssl import SSLSocket
 import tempfile
 from time import sleep
-from uuid import uuid4
+from uuid import UUID
 from pathlib import Path
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
@@ -113,8 +113,8 @@ class ChatWidget(QWidget):
         self.button.clicked.connect(self.on_send)
         self.attach.clicked.connect(self.attach_file)
 
-        # Placeholder
-        self.room_id = uuid4()
+        self.room_id: UUID = UUID(int=1)
+        self.change_room(UUID(int=0).bytes)
 
     def listen_for_messages(self, name: str) -> None:
         self.name = name
@@ -249,10 +249,24 @@ class ChatWidget(QWidget):
                 # so we assume that "c" has "compute_size" attribute
                 c.compute_size() #type: ignore
 
-    def change_room(self, room_id) -> None:
-        if room_id == 0:
+    @Slot(bytes)
+    def change_room(self, room_id: bytes) -> None:
+        current = self.room_id.bytes
+        if room_id == current:
+            return
+
+        if room_id == UUID(int=0).bytes: 
             self.inputs.hide()
-        elif self.inputs.isHidden():
+            self.send_field.setDisabled(True)
+        else:
+            print("Changed to", self.room_id)
             self.inputs.show()
+            self.send_field.setDisabled(False)
+        self.room_id = UUID(bytes=room_id)
+        self.clear_chat()
         # TODO: change scrollarea's content with contents of current room
+
+    def clear_chat(self) -> None:
+        for w in self.chat_area.children()[1:]:
+            w.deleteLater()
 

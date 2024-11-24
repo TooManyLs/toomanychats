@@ -6,7 +6,9 @@ import ssl
 from ssl import SSLSocket
 from configparser import ConfigParser
 from pathlib import Path
+from uuid import UUID, uuid4
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import (
     QApplication,
@@ -146,9 +148,11 @@ class MainWindow(QMainWindow):
             self.sign_in.reinit.connect(self.initUI)
             self.main_widget.header.reinit.connect(self.initUI)
 
+        # Only for testing purposes
         from widgets.components.chatroom_item import ChatRoomItem, ChatType
         for x in range(1, 20):
-            chatroom = ChatRoomItem(f"chat Room NO_{x}", ChatType.GROUP)
+            chatroom = ChatRoomItem(f"chat Room NO_{x}", ChatType.GROUP, uuid4())
+            chatroom.room_switch.connect(self.main_widget.change_room)
             self.chat_room_list_widget.list.addWidget(chatroom)
 
     def quit(self):
@@ -223,6 +227,13 @@ class MainWindow(QMainWindow):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         self.main_widget.attach_file(files)
 
+    def keyPressEvent(self, event) -> None:
+        # Shortcuts for splitter screen
+        if isinstance(self.stacked_layout.currentWidget(), Splitter):
+            if self.main_widget.room_id != UUID(int=0) and event.key() == Qt.Key.Key_Escape:
+                self.main_widget.change_room(UUID(int=0).bytes)
+        return super().keyPressEvent(event)
+
 
 app = QApplication(sys.argv)
 
@@ -234,6 +245,7 @@ window.setStyleSheet(
         }
     QSplitter{background-color: #161616;}
     QPushButton, QLabel, QLineEdit, QTextEdit{color: #f1f1f1;}
+    QFileDialog QLineEdit{color: black;}
     """
 )
 palette = QPalette()

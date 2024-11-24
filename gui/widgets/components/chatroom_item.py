@@ -1,6 +1,8 @@
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
+from PySide6.QtCore import Signal
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import (
     QFrame,
@@ -20,8 +22,10 @@ class ChatType(Enum):
     GROUP = 2
 
 class ChatRoomItem(QFrame):
-    def __init__(self, title: str, chat_type: ChatType, msgs: list | None = None) -> None:
+    room_switch= Signal(bytes)
+    def __init__(self, title: str, chat_type: ChatType, room_id: UUID) -> None:
         super().__init__()
+        self.id = room_id
         if chat_type == ChatType.PRIVATE:
             self.picture = r"./public/private_chat.png"
         else:
@@ -79,3 +83,9 @@ class ChatRoomItem(QFrame):
                 #time{color: gray;}
             """
         )
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            print(f"pressed {self.title.text()}_{self.id} chat room")
+            self.room_switch.emit(self.id.bytes)
+        return super().mousePressEvent(event)
