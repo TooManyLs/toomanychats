@@ -208,10 +208,15 @@ class MainWindow(QMainWindow):
                 or self.main_widget.room_id == UUID(int=0)
                 or (hasattr(self.main_widget, "dialog")
                     and self.main_widget.dialog.isVisible())
+                or not(data.hasUrls() or data.hasImage())
                 ):
-            return
-        if not(data.hasUrls() or data.hasImage()):
+            # Ignore drag event if either of these is true:
+            #   - data being dragged from the same window
+            #   - chatroom is closed (uuid of 0)
+            #   - attachment dialog window is showing
+            #   - dragged data has no image or urls
             event.ignore()
+            return
         if data.hasImage():
             pass
         elif (data.hasUrls()
