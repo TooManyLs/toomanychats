@@ -40,8 +40,8 @@ class Connect:
             """
             SELECT u.name, u.password, u.salt, u.totp_secret, 
                 COALESCE(uk.public_key, '0') AS public_key
-            FROM public."Users" u
-            LEFT JOIN public."UserKeys" uk ON u.user_id = uk.user_id
+            FROM public.users u
+            LEFT JOIN public.userkeys uk ON u.id = uk.user_id
             AND uk.device_id = %s WHERE u.name = %s 
             """,
             (psycopg2.Binary(device_id), name)
@@ -66,8 +66,8 @@ class Connect:
         cur.execute(
             """
             SELECT uk.public_key
-            FROM public."UserKeys" uk
-            JOIN public."Users" u ON uk.user_id = u.user_id
+            FROM public.userkeys uk
+            JOIN public.users u ON uk.user_id = u.id
             WHERE u.name = %s
             """,
             (name,)
@@ -85,8 +85,8 @@ class Connect:
         cur.execute(
             """
             SELECT u.name
-            FROM public."UserKeys" uk
-            JOIN public."Users" u ON uk.user_id = u.user_id
+            FROM public.userkeys uk
+            JOIN public.users u ON uk.user_id = u.id
             WHERE uk.public_key = %s
             """,
             (public_key,)
@@ -104,7 +104,7 @@ class Connect:
         cur = self.conn.cursor()
 
         cur.execute(
-            """INSERT INTO public."Users" (name, password, salt, totp_secret) 
+            """INSERT INTO public.users (name, password, salt, totp_secret) 
             VALUES (%s, %s, %s, %s)""",
             (name, psycopg2.Binary(password), psycopg2.Binary(salt), secret)
         )
@@ -118,8 +118,8 @@ class Connect:
         cur = self.conn.cursor()
 
         cur.execute(
-            """INSERT INTO public."UserKeys" (device_id, user_id, public_key)
-            VALUES (%s, (SELECT user_id FROM public."Users" WHERE name = %s), %s)""",
+            """INSERT INTO public.userkeys (device_id, user_id, public_key)
+            VALUES (%s, (SELECT id FROM public.users WHERE name = %s), %s)""",
             (psycopg2.Binary(device_id), name, public_key)
         )
         self.conn.commit()
