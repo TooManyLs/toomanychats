@@ -86,7 +86,7 @@ class SingleImage(QLabel):
         if (not os.path.exists(self.path) 
                 and not isinstance(self._pixmap, QMovie)):
             self.path = f"{images_dir}/{generate_name()}.webp"
-            self._pixmap.save(self.path)
+            self._pixmap.save(self.path, quality=95)
 
     def mousePressEvent(self, ev):
         if ev.button() == Qt.MouseButton.LeftButton:
@@ -106,7 +106,7 @@ class SingleImage(QLabel):
             self.temp_file = tempfile.NamedTemporaryFile(
                 delete=False, delete_on_close=True, suffix=".webp"
             )
-            self._pixmap.save(self.temp_file.name)
+            self._pixmap.save(self.temp_file.name, quality=95)
             self.path = self.temp_file.name
         else:
             self.path = os.path.abspath(self.path)
@@ -219,7 +219,7 @@ class SingleImage(QLabel):
             if isinstance(self._pixmap, QMovie):
                 shutil.copy(self.path, file_name)
             else:
-                self._pixmap.save(file_name)
+                self._pixmap.save(file_name, quality=95)
                 self.path = file_name
     
     def copy(self):
