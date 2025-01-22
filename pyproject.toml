@@ -1,0 +1,16 @@
+[project]
+name = "toomanychats"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "cryptography>=44.0.0",
+    "pillow>=11.1.0",
+    "pillow-heif>=0.21.0",
+    "psycopg2>=2.9.10",
+    "pycryptodome>=3.21.0",
+    "pyotp>=2.9.0",
+    "pyside6>=6.8.1.1",
+    "qrcode>=8.0",
+]
